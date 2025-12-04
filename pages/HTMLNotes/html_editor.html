@@ -1,0 +1,182 @@
+<html>
+<!-- made from HTMLNotes -->
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+/* CSS */
+*{ margin: 0; overflow: hidden; }
+#text1, #frame1{
+  box-sizing: border-box;
+  width: 250px;
+  height: 100px;
+  background: #fff;
+}
+#frame1{
+  box-sizing: border-box;
+  width: 250px;
+  height: 250px;
+}
+body{
+  background: #05f;
+}
+/* END */
+    </style>
+  </head>
+  <body>
+    <div class="markdown-src">
+<!-- HTML -->
+<textarea id='text1'></textarea><br>
+<iframe id='frame1'></iframe>
+<!-- END -->
+    </div>
+    <div style="display: none;"></div>
+    <script>
+      let datakey = "__ORBITAL_NOTES__:notedataid=WmzTEU7T17"
+      let inframe = (window!=window.top)
+      window.Note = {}
+      window.Note.data =
+/* JSON */
+{
+  "src": "<code>test 321</code><h3>Hi :3</h3>"
+};
+/* END */
+      (function(){
+        window.Note.save = saveData
+        window.Note.load = loadData
+        window.Note.autoSave = autoSave
+        function getNoteModule(){
+          if(!window['Note']) window.Note = {}
+          return window.Note
+        }
+        function loadData(){
+          let note = getNoteModule()
+          if(!inframe){
+            try{
+              let savedata = localStorage.getItem(datakey)
+              if(savedata && savedata.length){
+                note.data = JSON.parse(savedata)
+              }
+              window.addEventListener("message", onMessage)
+            } catch(e){
+              console.log("No local data")
+              console.log(e)
+            }
+          } else {
+            return note.data
+          }
+        }
+
+        let firstLogCall = true
+        let originalLogFunc = console.log
+        function log(x, ...rest){
+          if(firstLogCall)
+            document.body.appendChild(document.createElement("hr"))
+         else
+            document.body.appendChild(document.createElement("br"))
+          document.body.appendChild(
+            document.createTextNode(x + " " + rest.join(" ")))
+          firstLogCall = false
+          originalLogFunc(x, ...rest)
+        }
+        console.log = log
+
+        let SaveInterval = 500
+
+        window.addEventListener("load", ()=>{
+          convertMarkdown()
+          autoSave()
+          loadData() // dont wait for async
+        })
+        let saveIntervalRef = null
+        function autoSave(enable){
+          if(enable === undefined) enable = true
+          clearInterval(saveIntervalRef)
+          if(enable){
+            saveIntervalRef = window.setInterval(saveData, SaveInterval)
+          }
+        }
+        // this is preferred over a 'localstorage' polyfill for a frame,
+        // so the programmer doesn't assume this is the browsers localstorage
+        function saveData(){
+          let note = getNoteModule()
+          if(inframe){
+            let msg_obj = {
+              action: "saveData",
+              data: JSON.stringify(note['data'])
+            }
+            let message = JSON.stringify(msg_obj)
+            window.parent.postMessage(message)
+          } else {
+            localStorage.setItem(datakey, JSON.stringify(note['data']))
+          }
+        }
+        let md_subs = [
+          /(\n|^)\s*######\s([^\s#].*)\n*/g, "\n<h6 id=\"$2\">$2</h6>\n",
+          /(\n|^)\s*#####\s([^\s#].*)\n*/g, "\n<h5 id=\"$2\">$2</h5>\n",
+          /(\n|^)\s*####\s*([^\s#].*)\n*/g, "\n<h4 id=\"$2\">$2</h4>\n",
+          /(\n|^)\s*###\s*([^\s#].*)\n*/g, "\n<h3 id=\"$2\">$2</h3>\n",
+          /(\n|^)\s*##\s*([^\s#].*)\n*/g, "\n<h2 id=\"$2\">$2</h2>\n",
+          /(\n|^)\s*#\s*([^\s#].*)\n*/g, "\n<h1 id=\"$2\">$2</h1>\n",
+          /\n(\s*)[\*\-](.*)/g, '\n<ul><li>$2</li></ul>',
+          /\n+\n(?=[^#\n])/g, "\n\n<br><br>",
+          /\n+\n/g, "\n",
+          /__([^_\n]*)__/g, "<b>$1</b>",
+          /\*\*([^_\n]*)\*\*/g, "<b>$1</b>",
+          /_([^_\n]*)_/g, "<i>$1</i>",
+          /\*([^_\n]*)\*/g, "<i>$1</i>",
+          /\!\[([^\]\n]*)\]\(([^\)\n]*)\)/g, "<img src=\"$2\" alt=\"$1\"></img>",
+          /\[([^\]\n]*)\]\(([^\)\n]*)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>",
+        ]
+        function onMessage(){
+          try{
+            let message = JSON.parse(e.data)
+            // console.log('received message', message)
+            if(message.hasOwnProperty("event")){
+              if(message.event == "keydown" && typeof keydown != "undefined"){
+                keydown(message)
+              }
+              if(message.event == "keyup" && typeof keyup != "undefined"){
+                keydown(message)
+              }
+            }
+          } catch(e){
+            console.warn("error processing message: " + e.data)
+          }
+        }
+        function convertMarkdown(){
+          let containers = document.getElementsByClassName("markdown-src")
+          for(let j=0; j<containers.length; ++j){
+            let container = containers[j]
+            let src = container.innerHTML
+            for(var i=0; i<md_subs.length-1; i += 2){
+              var search = md_subs[i]
+              var replace = md_subs[i+1]
+              src = src.replace(search, replace)
+            }
+            container.innerHTML = src
+          }
+        }
+      })()
+      //window.addEventListener('load', htmlNotesMainFunc)
+      //function htmlNotesMainFunc(){
+/* JS */
+setInterval(update, 60)
+let data = Note.data ?? {}
+
+window.addEventListener("load", init)
+setTimeout(init, 200)
+function init(){
+  frame1.srcdoc = text1.value = data.src
+  update()
+}
+function update(){
+  if(data.src != text1.value){
+    frame1.srcdoc = data.src = text1.value
+    window.addEventListener("save", init)
+  }
+}
+/* END */
+      //}
+    </script>
+  </body>
+<html>
