@@ -38,7 +38,7 @@ button{
 <script>
 let anchor = document.querySelector('a');
 anchor.setAttribute('download', saved_site.html');
-anchor.setAttribute('href', 'data:text/html,<html>\n'+document.documentElement.innerHTML+'\n</html>');
+anchor.setAttribute('href', 'data:text/html,<html>\n'+document.documentElement.text1.value+'\n</html>');
 </script>
 <!-- END -->
     </div>
@@ -50,7 +50,7 @@ anchor.setAttribute('href', 'data:text/html,<html>\n'+document.documentElement.i
       window.Note.data =
 /* JSON */
 {
-  "textHtml": "<code>test 321</code><h3>Hi :3</h3>"
+  "textHtml": "<head></head>\n<body>Hi :3</body>"
 };
 /* END */
       (function(){
