@@ -1,0 +1,759 @@
+<html>
+<!-- made from HTMLNotes -->
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+/* CSS */
+
+/* END */
+    </style>
+  </head>
+  <body>
+    <div class="markdown-src">
+<!-- HTML -->
+
+<!-- END -->
+    </div>
+    <div style="display: none;"></div>
+    <script>
+      let datakey = "__ORBITAL_NOTES__:notedataid=IFFiFOQvc5"
+      let inframe = (window!=window.top)
+      window.Note = {}
+      window.Note.data =
+/* JSON */
+{
+  "data": "{\"strokes\":[[[-2.02,-2],[-2,2.205]],[[-2.0619,-2.0342],[2.2597,-2.0828]],[[2.3568,-2.083],[2.551,2.315]],[[2.5268,2.1409],[-2.0259,2.0923]],[[-1.4064,-0.4103],[0.1232,1.2905]],[[-0.0225,1.5092],[2.114,-1.4803]],[]],\"x0\":-0.2732,\"y0\":-0.0648,\"zoom\":2}"
+};
+/* END */
+      (function(){
+        window.Note.save = saveData
+        window.Note.load = loadData
+        window.Note.autoSave = autoSave
+        function getNoteModule(){
+          if(!window['Note']) window.Note = {}
+          return window.Note
+        }
+        function loadData(){
+          let note = getNoteModule()
+          if(!inframe){
+            try{
+              let savedata = localStorage.getItem(datakey)
+              if(savedata && savedata.length){
+                note.data = JSON.parse(savedata)
+              }
+              window.addEventListener("message", onMessage)
+            } catch(e){
+              console.log("No local data")
+              console.log(e)
+            }
+          } else {
+            return note.data
+          }
+        }
+
+        let firstLogCall = true
+        let originalLogFunc = console.log
+        function log(x, ...rest){
+          if(firstLogCall)
+            document.body.appendChild(document.createElement("hr"))
+         else
+            document.body.appendChild(document.createElement("br"))
+          document.body.appendChild(
+            document.createTextNode(x + " " + rest.join(" ")))
+          firstLogCall = false
+          originalLogFunc(x, ...rest)
+        }
+        console.log = log
+
+        let SaveInterval = 500
+
+        window.addEventListener("load", ()=>{
+          convertMarkdown()
+          autoSave()
+          loadData() // dont wait for async
+        })
+        let saveIntervalRef = null
+        function autoSave(enable){
+          if(enable === undefined) enable = true
+          clearInterval(saveIntervalRef)
+          if(enable){
+            saveIntervalRef = window.setInterval(saveData, SaveInterval)
+          }
+        }
+        // this is preferred over a 'localstorage' polyfill for a frame,
+        // so the programmer doesn't assume this is the browsers localstorage
+        function saveData(){
+          let note = getNoteModule()
+          if(inframe){
+            let msg_obj = {
+              action: "saveData",
+              data: JSON.stringify(note['data'])
+            }
+            let message = JSON.stringify(msg_obj)
+            window.parent.postMessage(message)
+          } else {
+            localStorage.setItem(datakey, JSON.stringify(note['data']))
+          }
+        }
+        let md_subs = [
+          /(\n|^)\s*######\s([^\s#].*)\n*/g, "\n<h6 id=\"$2\">$2</h6>\n",
+          /(\n|^)\s*#####\s([^\s#].*)\n*/g, "\n<h5 id=\"$2\">$2</h5>\n",
+          /(\n|^)\s*####\s*([^\s#].*)\n*/g, "\n<h4 id=\"$2\">$2</h4>\n",
+          /(\n|^)\s*###\s*([^\s#].*)\n*/g, "\n<h3 id=\"$2\">$2</h3>\n",
+          /(\n|^)\s*##\s*([^\s#].*)\n*/g, "\n<h2 id=\"$2\">$2</h2>\n",
+          /(\n|^)\s*#\s*([^\s#].*)\n*/g, "\n<h1 id=\"$2\">$2</h1>\n",
+          /\n(\s*)[\*\-](.*)/g, '\n<ul><li>$2</li></ul>',
+          /\n+\n(?=[^#\n])/g, "\n\n<br><br>",
+          /\n+\n/g, "\n",
+          /__([^_\n]*)__/g, "<b>$1</b>",
+          /\*\*([^_\n]*)\*\*/g, "<b>$1</b>",
+          /_([^_\n]*)_/g, "<i>$1</i>",
+          /\*([^_\n]*)\*/g, "<i>$1</i>",
+          /\!\[([^\]\n]*)\]\(([^\)\n]*)\)/g, "<img src=\"$2\" alt=\"$1\"></img>",
+          /\[([^\]\n]*)\]\(([^\)\n]*)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>",
+        ]
+        function onMessage(){
+          try{
+            let message = JSON.parse(e.data)
+            // console.log('received message', message)
+            if(message.hasOwnProperty("event")){
+              if(message.event == "keydown" && typeof keydown != "undefined"){
+                keydown(message)
+              }
+              if(message.event == "keyup" && typeof keyup != "undefined"){
+                keydown(message)
+              }
+            }
+          } catch(e){
+            console.warn("error processing message: " + e.data)
+          }
+        }
+        function convertMarkdown(){
+          let containers = document.getElementsByClassName("markdown-src")
+          for(let j=0; j<containers.length; ++j){
+            let container = containers[j]
+            let src = container.innerHTML
+            for(var i=0; i<md_subs.length-1; i += 2){
+              var search = md_subs[i]
+              var replace = md_subs[i+1]
+              src = src.replace(search, replace)
+            }
+            container.innerHTML = src
+          }
+        }
+      })()
+      //window.addEventListener('load', htmlNotesMainFunc)
+      //function htmlNotesMainFunc(){
+/* JS */
+onload(main)
+
+function onload(x){
+  if(document.readyState == 'complete')
+    setTimeout(x, 200)
+  else
+    window.addEventListener('load', x)
+}
+function id(x){ return document.getElementById(x)}
+function page(x){ document.body.innerHTML = x}
+function event(name, target){
+  if(!target) target = window
+  target.addEventListener(name, window[name])}
+function style(name, value){ document.body.style[name] = value}
+
+let doc = `
+  <canvas id='cc'></canvas>
+  <div class='topbar alignLeft'>
+    <button onclick='redo()' id='redoButton' title='redo'
+      class="blackbg noborder font pad15-20 bold"><u>redo</u></button> 
+    <button onclick='undo()' id='undoButton' title='undo'
+      class="blackbg noborder font pad15-20 bold"><u>undo</u></button>  
+    <button onclick='removeButtonClick()' id='removeButton' title='remove'
+      class="blackbg noborder font pad15-20 bold"><u>eraser</u></button>
+    <button onclick='zoomIn()' id='zoomInButton' title='remove'
+      class="blackbg noborder font pad15-20 bold">+</button>
+    <button onclick='zoomOut()' id='zoomOutButton' title='remove'
+      class="blackbg noborder font pad15-20 bold">-</button>
+  </div>
+  <style>
+     body{ user-select: none; }
+    .bluebg{ background: #00d; color: #fff; }
+    .redbg{ background: #c00; color: #fff; }
+    .topbar{ position: absolute; top: 0; z-index: 9999; }
+    .alignCenter{ text-align: center; }
+    .alignRight{ text-align: right; }
+    .alignLeft{ text-align: left; }
+    .blackbg{ background: #000; color: #fff; }
+    .rounded{ border-radius: 12px; }
+    .pad15-20{ padding: 10px 12px; }
+    .font{ font-size: 13px; }
+    .noborder{ border: none; }
+    .bold{ font-weight: bold; }
+  </style>
+`
+const minPrimaryStrokeDist = 15 // to keep a stroke on the primary canvas it must be at least this long
+const bg = '#fff'
+const pagebg = '#cef'
+const size = 4
+const cursorColor = 'rgba(255,23,54,0.85)'
+const circleColor = 'rgba(0,0,0,0.5)'
+const ptColor = '#000'
+const marginColor = 'rgba(0,0,0,0.2)'
+const marginColor2 = 'rgba(0,0,0,0.075)'
+const precision = 3.89
+const dt = 80
+const removeDist = 80
+const panspeed = 120 
+const minspeed = 10 
+const speeddecay = 0.1
+const savetime = 2750
+const un = undefined
+const debugRemove = false
+const maxZoom = 10
+const minZoom = 1
+
+// temp
+let
+pressed = false,
+removeTool = false,
+w=un,
+h=un,
+m=un,
+cursor = [0, 0],
+cursordown = [0, 0],
+stroke = [],
+undoList = [],
+panx = 0.01,
+pany = 0,
+mousemoved = false
+
+let
+zoom = 1,
+strokes = [stroke],
+x0 = 0,
+y0 = 0
+
+
+function test(){
+  let d = segDist([0,0], [0,5], [-1,1])
+  console.log("dist: " + d)
+}
+
+function main(){
+  //test()
+  init()
+  draw()
+  event('keydown')
+  event('mousedown', id('cc'))
+  event('mousemove', id('cc'))
+  event('mouseup', id('cc'))
+  event('touchstart', id('cc'))
+  event('touchmove', id('cc'))
+  event('touchend', id('cc'))
+  window.addEventListener('resize', resize)
+  
+  setInterval(loop, dt)
+  setInterval(save, dt)
+}
+
+function zoomIn(){
+  zoom *= 2
+  if(zoom > maxZoom) zoom = maxZoom
+}
+
+function zoomOut(){
+  zoom /= 2
+  if(zoom < minZoom) zoom = minZoom
+}
+
+function resize(){
+  w = window.innerWidth - 5
+  h = window.innerHeight - 5
+  //if(w < h) h = w-1
+  m = Math.min(w, h)/8
+  id('cc').width = w
+  id('cc').height = h
+}
+function init(){
+  load()
+  page(doc)
+  resize()
+  style('margin', '0px')
+  style('background', pagebg)
+  style('overflow', 'hidden')
+}
+
+function draw(){
+  //variables
+  let primary = w>h? cursor[0] < w/2 : cursor[1] < h/2
+  let ctx = id('cc').getContext('2d')
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  let wide = w > h
+
+  let s = zoom * Math.min(w, h)/2/precision
+  
+  // clear
+  ctx.fillStyle = debugRemove && removeTool? 'rgba(255,255,255,0.15)' : bg
+  ctx.fillRect(0,0,wide? w/2: w, wide? h : h/2)
+
+  // cursor
+  ctx.fillStyle = cursorColor
+  if(true || !primary){
+    let [a, b] = cursorPoint()
+    let x = ((wide? w/2 : w) + s * (a - x0))/2,
+        y = ((wide? h : h/2) + s * (b - y0))/2
+    ctx.fillRect(x - size/2, y - size/2, size, size)
+  }
+
+  //strokes
+  ctx.strokeStyle = ptColor
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  for(let j=0; j<strokes.length; ++j){
+    let pts = strokes[j];
+    if(!pts) continue;
+    for(let i=0; i<pts.length; ++i){
+      let pt = pts[i]
+      if(!pt) continue
+      let x = ((wide? w/2 : w) + s * (pt[0] - x0))/2,
+          y = ((wide? h : h/2) + s * (pt[1] - y0))/2
+      if(i == 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+      if(pts.length == 1)
+        ctx.lineTo(x + 1, y + 1)
+    }
+  }
+  ctx.stroke()
+
+  
+  //clear secondary surface
+  if(wide) ctx.clearRect(w/2, 0, w/2, h)
+  else ctx.clearRect(0, h/2, w, h/2)
+  
+  // copy drawing window
+  {
+    ctx.globalAlpha = 0.40
+    let dx = w/precision/(w>h? 4: 2)
+    let dy = h/precision/(w>h? 2: 4)
+    let centerCursor = (primary && pressed == "primary")
+    let a, b
+    if(centerCursor){
+      [a, b] = cursor
+    }else{
+      [a, b] = w>h? [w/4, h/2]:[w/2, h/4]
+    }
+    a -= dx/2; b -= dy/2
+    let [e, f, g, i] = w>h? [w/2, 0, w, h] : [0, h/2, w, h]
+    ctx.drawImage(id('cc'), a, b, dx, dy,
+      e, f, (g-e), (i-f))
+  }
+  ctx.globalAlpha = 1.0
+
+  // virtual tablet margin
+  ctx.fillStyle = marginColor
+  {
+  let [a, b, c, d] = wide? [w/2, 0, w, h] : [0, h/2, w, h]
+  ctx.beginPath()
+  ctx.moveTo(a,b)
+  ctx.lineTo(a,d)
+  ctx.lineTo(c,d)
+  ctx.lineTo(c,b)
+  ctx.lineTo(a,b)
+  ctx.lineTo(a+m, b+m)
+  ctx.lineTo(c-m, b+m)
+  ctx.lineTo(c-m, d-m)
+  ctx.lineTo(a+m, d-m)
+  ctx.lineTo(a+m, b+m)
+  ctx.lineTo(a, b)
+  ctx.fill()
+  }
+}
+
+function mousedown(e){
+  cursor[0] = cursordown[0] = e.clientX
+  cursor[1] = cursordown[1] = e.clientY
+  let primary = w>h? cursor[0] < w/2 : cursor[1] < h/2
+  if(removeTool){
+    remove()
+  } else {
+    if(!getEdge()){
+      pressed = primary? "primary" : "secondary"
+      if(pressed == "primary"){
+        stroke[0] = cursorPoint().slice(0).map(round4)}
+      undoList.length = 0
+    }
+  }
+}
+function touchstart(e){
+  e.preventDefault()
+  e.stopPropagation()
+  let t = e.changedTouches[0]
+  mousedown(t)
+  mousemove(t)
+  return false
+}
+function touchmove(e){
+  e.preventDefault()
+  e.stopPropagation()
+  if(pressed)
+    mousemove(e.touches[0])
+}
+function touchend(e){
+  e.preventDefault()
+  e.stopPropagation()
+  mouseup(e.changedTouches[0])
+  e.preventDefault()
+}
+function computePanSpeed(){
+  let edge = getEdge()
+  if(!edge || pressed){
+    panx = 0
+    pany = 0
+    return
+  }
+
+  let [x, y] = cursor
+  let primary = w>h? x < w/2 : y < h/2
+  if(primary){
+    x += w>h? w/2 : 0
+    y += w>h? 0 : h/2
+  }
+  let x1 = w>h? 3*w/4 : w/2
+  let y1 = w>h? h/2 : 3*h/4
+
+  let dx = x - x1
+  let dy = y - y1
+
+  let len = (dx**2 + dy**2)**0.5
+  dx /= len
+  dy /= len
+  let s = zoom * Math.min(w, h)/2/precision
+  let timescale = dt / 1000
+  panx = dx * panspeed * timescale / s
+  pany = dy * panspeed * timescale / s
+}
+function move(dir){
+  let s = zoom * Math.min(w, h)/2/precision
+  let timescale = dt / 1000
+  if(dir == 'left'){
+    panx = -panspeed * timescale / s
+    pany = 0 }
+  if(dir == 'right'){
+    panx = panspeed * timescale / s
+    pany = 0}
+  if(dir == 'up'){
+    panx = 0
+    pany = -panspeed * timescale / s}
+  if(dir == 'down'){
+    panx = 0
+    pany = panspeed * timescale / s}
+}
+function moveleft(){
+}
+function mouseup(e){
+  // auto scroll
+  if(removeTool){
+    ;[x0, y0] = cursorPoint()
+    cursor[0] = w>h? 3*w/4 : w/2
+    cursor[1] = w>h? h/2 : 3*h/4
+  }
+  if(pressed){
+    if(pressed == "primary"){
+      let dx = cursor[0] - cursordown[0]
+      let dy = cursor[1] - cursordown[1]
+      let dist = (dx**2 + dy**2)**0.5
+
+      let laststroke = strokes.pop()
+      if(dist >= minPrimaryStrokeDist){
+        strokes.push(laststroke)
+      } else { // recenter
+        ;[x0, y0] = cursorPoint()
+        cursor[0] = w>h? 3*w/4 : w/2
+        cursor[1] = w>h? h/2 : 3*h/4
+      }
+    }
+    stroke = []
+    strokes.push(stroke)
+  }
+  pressed = false
+}
+function getEdge(){
+  let edge = 0
+
+  let primary = w>h? cursor[0] < w/2 : cursor[1] < h/2
+
+  let [x, y] = cursor
+
+  if(primary)
+    return 0
+  if(y < (w>h? m : h/2 + m)) edge = 2
+  if(y > h - m) edge = 4
+  if(x < (w>h? w/2 + m : m)) edge = 1
+  if(x > w - m) edge = 3
+  return edge
+}
+
+function save(){
+  window.Note.data['data'] = JSON.stringify({ strokes, x0, y0, zoom })
+}
+
+function load(){
+  try{
+    let x = JSON.parse(window.Note.data['data'])
+   strokes = x['strokes'] ?? []
+    x0 = x['x0'] ?? 0
+    y0 = x['y0'] ?? 0
+    zoom = x['zoom'] ?? 1
+    if(strokes.length && strokes[strokes.length - 1].length == 0)
+      strokes.pop()
+    stroke = []
+    strokes.push(stroke)
+  } catch(e){
+    console.log('No data or error loading.')
+  }
+}
+
+function cursorPoint(){
+  let x = cursor[0], y = cursor[1]
+  let wide = w > h
+  let primary = w>h? cursor[0] < w/2 : cursor[1] < h/2
+  // compensate for primary or secondary screen
+  if(primary){ wide? (x += w/2) : (y += h/2) }
+  x -= w/2
+  y -= h/2
+  wide? x -= w/4 : y -= h/4
+  let s = zoom*Math.min(w, h)/2/(primary? 2*precision : 1)
+  return [round4(x/s + x0), round4(y/s + y0)]
+}
+function mousemove(e){
+  cursor[0] = e.clientX
+  cursor[1] = e.clientY
+  // if the mousemove triggers
+  // primary surface, trigger drawing
+  mousemoved = true
+}
+function round4(x){
+  return Math.round(10*1000*x)/1000/10
+}
+
+function loop(){
+  let primary = w>h? cursor[0] < w/2 : cursor[1] < h/2
+  if(!primary && pressed == "secondary"){
+    stroke.push(cursorPoint().slice(0).map(round4))}
+  if(primary && pressed == "primary"){
+    if(stroke.length == 0)
+      stroke.push(cursorPoint().slice(0).map(round4))
+    else
+      stroke[1] = cursorPoint().slice(0).map(round4)}
+  if(mousemoved){
+    mousemoved = false
+    if(!primary) computePanSpeed()
+  }
+  x0 += panx
+  y0 += pany
+  let timescale = dt / 1000
+  panx *= Math.pow(speeddecay, timescale)
+  pany *= Math.pow(speeddecay, timescale)
+  let s = zoom * Math.min(w, h)/2/precision
+  let min = minspeed * timescale / s
+
+  if((panx != 0 || pany !=0) &&
+    Math.abs(panx) < min &&
+    Math.abs(pany) < min){
+    panx = pany = 0
+    cursor[0] = w>h? 3*w/4 : w/2
+    cursor[1] = w>h? h/2 : 3*h/4
+  }
+  draw()
+}
+
+function keydown(e){
+  if(e.key == 'z') undo()
+  if(e.key == 'a') redo()
+  if(e.key == 'x') removeButtonClick()
+  if(e.key == '+') zoomIn()
+  if(e.key == '-') zoomOut()
+  if(e.key == "ArrowLeft") move('left')
+  if(e.key == "ArrowRight") move('right')
+  if(e.key == "ArrowUp") move('up')
+  if(e.key == "ArrowDown") move('down')
+}
+
+function redo(){
+  if(strokes.length) strokes.pop()
+  if(undoList.length) strokes.push(undoList.pop())
+  stroke = []
+  strokes.push(stroke)
+  recenter()
+  draw()
+}
+
+
+function undo(){
+  if(!pressed && strokes.length){
+    strokes.pop()
+  }
+  pressed = false
+  if(strokes.length) undoList.push(strokes.pop())
+  stroke = []
+  strokes.push(stroke)
+  // recenter()
+  draw()
+}
+
+function recenter(axisOptional){
+  for(let i = strokes.length - 1; i > -1; --i){
+    let laststroke = strokes[i]
+    if(laststroke.length){
+      let minx, maxx, miny, maxy
+      for(let j=0; j<laststroke.length; ++j){
+        let [x, y] = laststroke[j]
+        if(j == 0 || x < minx) minx = x
+        if(j == 0 || x > maxx) maxx = x
+        if(j == 0 || y < miny) miny = y
+        if(j == 0 || y < maxy) maxy = y
+      }
+      if(axisOptional != 'y'){
+        x0 = (minx + maxx)/2
+        cursor[0] = w>h? 3*w/4 : w/2
+      }
+      if(axisOptional != 'x'){
+        y0 = (miny + maxy)/2
+        cursor[1] = w>h? h/2 : 3*h/4
+      }
+      break
+    } 
+  }
+}
+
+function removeButtonClick(){
+  if(removeTool){
+    removeTool = false
+    removeButton.classList.remove('redbg')
+    removeButton.classList.add('blackbg')
+    return
+  }
+  removeButton.classList.remove('blackbg')
+  removeButton.classList.add('redbg')
+  removeTool = true
+}
+function drawSegDist(a, b, c){
+  let ctx = id('cc').getContext('2d')
+  let scale = zoom * Math.min(w, h)/2/precision
+  ctx.save()
+  let [a0, a1] = a
+  let [b0, b1] = b
+  let [x, y] = c
+
+  let dx = b0 - a0, dy = b1 - a1
+  let len = (dx**2 + dy**2)**0.5
+
+  let s, t
+  if(Math.abs(dx) < Math.abs(dy)){
+    s = (dx*y/dy - dx*a1/dy + a0 - x)/(dx**2/dy + dy)
+    t = (-s*dx + y - a1)/dy
+  } else {
+    s = (dy*x/dx - dy*a0/dx + a1 - y)/(dy**2/dx + dx)
+    t = (-s*dy + x - a0)/dx
+  }
+
+  if(t < 0) t=0
+  if(t > 1) t=1
+  let xx, yy
+  xx = ((w>h? w/2 : w) + scale * (x - x0))/2,
+  yy = ((w>h? h : h/2) + scale * (y - y0))/2
+  //console.log(xx, yy)
+
+  xxx = ((w>h? w/2 : w) + scale * (dx*t + a0 - x0))/2,
+  yyy = ((w>h? h : h/2) + scale * (dy*t + a1 - y0))/2
+  let dxx = xxx-xx
+  let dyy = yyy-yy
+  let len2 = ((xxx-xx)**2 + (yyy-yy)**2) ** 0.5
+  ctx.strokeStyle = "red"
+  if(len2 > removeDist / precision){
+    xx = xx + dxx * removeDist / len2 / precision
+    yy = yy + dyy * removeDist / len2 / precision
+    ctx.strokeStyle = "rgba(0,0,255, 0.1)"
+  }
+
+
+  ctx.beginPath()
+  ctx.moveTo(xx, yy)
+  ctx.lineTo(xxx, yyy)
+  //console.log(xxx, yyy)
+  ctx.stroke()
+  ctx.restore()
+}
+function remove(){
+  let pt = cursorPoint()
+  let startdist = removeDist / Math.min(w, h) * precision
+  let mindist = 999999
+  let minstroke = -1
+  for(let i=0; i<strokes.length; ++i){
+    let stroke = strokes[i]
+    let n = stroke.length
+    for(let j=0; j<stroke.length; ++j){
+      let a = stroke[j], b = stroke[j+1]
+      if(j == stroke.length - 1){
+        // in case there is 1 point in the stroke.
+        if(stroke.length > 1) break
+        b = a
+      }
+      
+      let d = segDist(a, b, pt)
+      if(debugRemove && d < 5 * startdist){
+        drawSegDist(a, b, pt)
+      }
+      if(d < mindist){
+        minstroke = i
+        mindist = d
+      } 
+    }
+  }
+  // console.log("startdist", startdist, "mindist", mindist, "minstroke", minstroke)
+  if(minstroke > -1 && mindist < startdist){
+    undoList.push(strokes.splice(minstroke, 1)[0])
+  }
+}
+
+// the distance of point c from segment a, b
+function segDist(a, b, c){
+  let [a0, a1] = a
+  let [b0, b1] = b
+  let [x, y] = c
+
+  let dx = b0 - a0, dy = b1 - a1
+  let len = (dx**2 + dy**2)**0.5
+  if(len < 0.1**11){
+    console.warn("seg distance called on zero length segment.")
+    return ((a0 - x)**2 + (a1 - y)**2)**0.5
+  }
+
+  // solve for intersection of segment and a perpendicular vector originating at
+  // c, the point off the segment
+
+  let s, t
+  if(Math.abs(dx) < Math.abs(dy)){
+    s = (dx*y/dy - dx*a1/dy + a0 - x)/(dx**2/dy + dy)
+    t = (-s*dx + y - a1)/dy
+  } else {
+    s = (dy*x/dx - dy*a0/dx + a1 - y)/(dy**2/dx + dx)
+    t = (-s*dy + x - a0)/dx
+  }
+  if(t < 0) t=0
+  if(t > 1) t=1
+  let result = ((t*dx + a0 - x)**2 + (t*dy + a1 - y)**2)**0.5
+  return result
+}
+
+function clear(){
+  stroke = []
+  strokes = [stroke]
+  x0 = 0
+  y0 = 0
+}
+/* END */
+      //}
+    </script>
+  </body>
+<html>

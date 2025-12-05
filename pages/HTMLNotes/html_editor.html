@@ -1,23 +1,29 @@
+
 <html>
-<!-- made from HTMLNotes -->
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
 /* CSS */
-*{ margin: 0; overflow: hidden; }
-#text1, #frame1{
+*{ margin: 0; }
+body{ background: #05f; }
+#text1{
   box-sizing: border-box;
   width: 250px;
-  height: 100px;
-  background: #fff;
+  height: 115px;
+  background: #eee;
 }
 #frame1{
+  width: 300px;
+  height: 300px;
+  background: #fff;
   box-sizing: border-box;
-  width: 250px;
-  height: 250px;
 }
-body{
-  background: #05f;
+button{
+  color: #fff;
+  background: #000;
+  border: 1px solid #777;
+  padding: 4px 5px;
+  border-radius: 7px;
 }
 /* END */
     </style>
@@ -27,17 +33,24 @@ body{
 <!-- HTML -->
 <textarea id='text1'></textarea><br>
 <iframe id='frame1'></iframe>
+<div></div>
+<a href='#' download>Save</a>
+<script>
+let anchor = document.querySelector('a');
+anchor.setAttribute('download', saved_site.html');
+anchor.setAttribute('href', 'data:text/html,<html>\n'+document.documentElement.innerHTML+'\n</html>');
+</script>
 <!-- END -->
     </div>
     <div style="display: none;"></div>
     <script>
-      let datakey = "__ORBITAL_NOTES__:notedataid=WmzTEU7T17"
+      let datakey = "__ORBITAL_NOTES__:notedataid=7pOBtnJnbq"
       let inframe = (window!=window.top)
       window.Note = {}
       window.Note.data =
 /* JSON */
 {
-  "src": "<code>test 321</code><h3>Hi :3</h3>"
+  "textHtml": "<code>test 321</code><h3>Hi :3</h3>"
 };
 /* END */
       (function(){
@@ -160,18 +173,19 @@ body{
       //window.addEventListener('load', htmlNotesMainFunc)
       //function htmlNotesMainFunc(){
 /* JS */
-setInterval(update, 60)
-let data = Note.data ?? {}
+setInterval(update, 600)
+let data = window.Note.data
 
 window.addEventListener("load", init)
 setTimeout(init, 200)
 function init(){
-  frame1.srcdoc = text1.value = data.src
+  frame1.srcdoc = text1.value = data.textHtml
   update()
 }
+
 function update(){
-  if(data.src != text1.value){
-    frame1.srcdoc = data.src = text1.value
+  if(data.textHtml != text1.value){
+    frame1.srcdoc = data.textHtml = text1.value
     window.addEventListener("save", init)
   }
 }
