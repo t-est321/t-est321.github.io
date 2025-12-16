@@ -1,4 +1,4 @@
-Date format: yyyy.mm.dd
+`Date format: yyyy.mm.dd`
 
 > Update history
 
@@ -6,6 +6,6 @@ Date format: yyyy.mm.dd
 
 add icon
 
-**2025.12.16 00:08 GMT**
+**2025.12.16 00:11 GMT**
 
 update README.md
