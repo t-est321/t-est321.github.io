@@ -1,0 +1,197 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+/* CSS */
+button{
+  padding: 1em 1em;
+  color: #fff;
+  background: #000;
+  border: none;
+  margin: 1px;
+}
+body{
+  lineheight: 200%;
+}
+/* END */
+    </style>
+  </head>
+  <body>
+    <div class="markdown-src">
+<!-- HTML -->
+<button onclick="playNote(0)">A</button>
+<button onclick="playNote(2)">B</button>
+<button onclick="playNote(4)">C</button>
+<button onclick="playNote(5)">D</button>
+<button onclick="playNote(7)">E</button>
+<button onclick="playNote(9)">F</button>
+<button onclick="playNote(11)">G</button>
+<button onclick="playNote(12)">A</button>
+<!-- END -->
+    </div>
+    <div style="display: none;"></div>
+    <script>
+      let datakey = "__ORBITAL_NOTES__:notedataid=CN70QC9ILO"
+      let inframe = (window!=window.top)
+      window.Note = {}
+      window.Note.data =
+/* JSON */
+{};
+/* END */
+      (function(){
+        window.Note.save = saveData
+        window.Note.load = loadData
+        window.Note.autoSave = autoSave
+        function getNoteModule(){
+          if(!window['Note']) window.Note = {}
+          return window.Note
+        }
+        function loadData(){
+          let note = getNoteModule()
+          if(!inframe){
+            try{
+              let savedata = localStorage.getItem(datakey)
+              if(savedata && savedata.length){
+                note.data = JSON.parse(savedata)
+              }
+              window.addEventListener("message", onMessage)
+            } catch(e){
+              console.log("No local data")
+              console.log(e)
+            }
+          } else {
+            return note.data
+          }
+        }
+
+        let firstLogCall = true
+        let originalLogFunc = console.log
+        function log(x, ...rest){
+          if(firstLogCall)
+            document.body.appendChild(document.createElement("hr"))
+         else
+            document.body.appendChild(document.createElement("br"))
+          document.body.appendChild(
+            document.createTextNode(x + " " + rest.join(" ")))
+          firstLogCall = false
+          originalLogFunc(x, ...rest)
+        }
+        console.log = log
+
+        let SaveInterval = 500
+
+        window.addEventListener("load", ()=>{
+          convertMarkdown()
+          autoSave()
+          loadData() // dont wait for async
+        })
+        let saveIntervalRef = null
+        function autoSave(enable){
+          if(enable === undefined) enable = true
+          clearInterval(saveIntervalRef)
+          if(enable){
+            saveIntervalRef = window.setInterval(saveData, SaveInterval)
+          }
+        }
+        // this is preferred over a 'localstorage' polyfill for a frame,
+        // so the programmer doesn't assume this is the browsers localstorage
+        function saveData(){
+          let note = getNoteModule()
+          if(inframe){
+            let msg_obj = {
+              action: "saveData",
+              data: JSON.stringify(note['data'])
+            }
+            let message = JSON.stringify(msg_obj)
+            window.parent.postMessage(message)
+          } else {
+            localStorage.setItem(datakey, JSON.stringify(note['data']))
+          }
+        }
+        let md_subs = [
+          /(\n|^)\s*######\s([^\s#].*)\n*/g, "\n<h6 id=\"$2\">$2</h6>\n",
+          /(\n|^)\s*#####\s([^\s#].*)\n*/g, "\n<h5 id=\"$2\">$2</h5>\n",
+          /(\n|^)\s*####\s*([^\s#].*)\n*/g, "\n<h4 id=\"$2\">$2</h4>\n",
+          /(\n|^)\s*###\s*([^\s#].*)\n*/g, "\n<h3 id=\"$2\">$2</h3>\n",
+          /(\n|^)\s*##\s*([^\s#].*)\n*/g, "\n<h2 id=\"$2\">$2</h2>\n",
+          /(\n|^)\s*#\s*([^\s#].*)\n*/g, "\n<h1 id=\"$2\">$2</h1>\n",
+          /\n(\s*)[\*\-](.*)/g, '\n<ul><li>$2</li></ul>',
+          /\n+\n(?=[^#\n])/g, "\n\n<br><br>",
+          /\n+\n/g, "\n",
+          /__([^_\n]*)__/g, "<b>$1</b>",
+          /\*\*([^_\n]*)\*\*/g, "<b>$1</b>",
+          /_([^_\n]*)_/g, "<i>$1</i>",
+          /\*([^_\n]*)\*/g, "<i>$1</i>",
+          /\!\[([^\]\n]*)\]\(([^\)\n]*)\)/g, "<img src=\"$2\" alt=\"$1\"></img>",
+          /\[([^\]\n]*)\]\(([^\)\n]*)\)/g, "<a href=\"$2\" target=\"_blank\">$1</a>",
+        ]
+        function onMessage(){
+          try{
+            let message = JSON.parse(e.data)
+            // console.log('received message', message)
+            if(message.hasOwnProperty("event")){
+              if(message.event == "keydown" && typeof keydown != "undefined"){
+                keydown(message)
+              }
+              if(message.event == "keyup" && typeof keyup != "undefined"){
+                keydown(message)
+              }
+            }
+          } catch(e){
+            console.warn("error processing message: " + e.data)
+          }
+        }
+        function convertMarkdown(){
+          let containers = document.getElementsByClassName("markdown-src")
+          for(let j=0; j<containers.length; ++j){
+            let container = containers[j]
+            let src = container.innerHTML
+            for(var i=0; i<md_subs.length-1; i += 2){
+              var search = md_subs[i]
+              var replace = md_subs[i+1]
+              src = src.replace(search, replace)
+            }
+            container.innerHTML = src
+          }
+        }
+      })()
+      //window.addEventListener('load', htmlNotesMainFunc)
+      //function htmlNotesMainFunc(){
+/* JS */
+// create web audio api context
+const audioCtx = new AudioContext();
+
+let notes = ("A B- B C C# D " +
+  "E- E F F# G A-").split(" ")
+
+let mod = (n, m)=>
+  ((n % m) + m)%m
+
+let s = ''
+for(let i=-54; i<26; ++i)
+  s += `<button onclick="playNote(${i})">${notes[mod(i,12)]}</button>`
+document.body.innerHTML = s
+
+// create Oscillator node
+
+function sleep(t){
+  return new Promise(y=>setTimeout(y, 1000*t))}
+
+async function playNote(pitch){
+  const oscillator = audioCtx.createOscillator()
+  let f = Math.round(440 * 2**(pitch/12))
+  if(pitch<-36) oscillator.type = "sawtooth"
+  else if(pitch<-6) oscillator.type = "square"
+  else if(pitch<0) oscillator.type = "triangle" 
+  console.log('f', f)
+  oscillator.frequency.setValueAtTime(f, audioCtx.currentTime)
+  oscillator.connect(audioCtx.destination)
+  oscillator.start()
+  await sleep(1)
+  oscillator.stop()
+}
+/* END */
+      //}
+    </script>
+  </body>
+<html>
