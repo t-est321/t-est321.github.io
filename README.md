@@ -25,3 +25,7 @@ update HTMLNotes_files.HTML
 **2025.12.19 23:53 GMT**
 
 add midi_buttons.html
+
+**2025.12.23 16:39 GMT**
+
+update draw.html
