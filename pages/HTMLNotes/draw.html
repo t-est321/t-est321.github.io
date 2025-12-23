@@ -1,5 +1,4 @@
 <html>
-<!-- version 2.7.64 -->
 <!-- made from HTMLNotes -->
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,7 +22,7 @@
       window.Note.data =
 /* JSON */
 {
-  "data": "{\"strokes\":[[]],\"xs\":0,\"ys\":0}"
+  "data": "{\"strokes\":[[]],\"xs\":0,\"ys\":0,\"zoom\":1}"
 };
 /* END */
       (function(){
@@ -146,6 +145,8 @@
       //window.addEventListener('load', htmlNotesMainFunc)
       //function htmlNotesMainFunc(){
 /* JS */
+// version 2.8.02
+// original derekmc.gitlab.io/projects/precisiondraw/precisiondraw.html
 onload(main)
 function onload(x){
   if(document.readyState == 'complete')
@@ -162,48 +163,42 @@ function style(name, value){ document.body.style[name] = value}
 let doc = `
   <canvas id='cc'></canvas>
   <div class='topbar alignLeft'>
-    <button onclick='redo()' id='redoButton' title='redo' class="blackbg border font pad15-20 bold"><u>redo (r)</u></button>
-    <button onclick='undo()' id='undoButton' title='undo' class="blackbg border font pad15-20 bold"><u>undo (u)</u></button>
-    <button onclick='removeButtonClick()' id='removeButton' title='remove' class="blackbg border font pad15-20 bold"><u>eraser (x)</u></button>
-    <button onclick='save()' id='saveButton' title='save' class="blackbg border font pad15-20 bold"><u>save (s)</u></button>
-    <button onclick='zoomIn()' id='zoomInButton' title='remove' class="blackbg border font pad15-20 bold">zoom + (+)</button>
-    <button onclick='zoomOut()' id='zoomOutButton' title='remove' class="blackbg border font pad15-20 bold">zoom - (-)</button>
+    <button onclick='erase()' id='clearButton' title='clear' class="redbg border font pad bold"><u>c</u>lear</button>
+    <button onclick='load()' id='loadButton' title='load' class="blackbg border font pad bold"><u>l</u>oad</button>
+    <button onclick='redo()' id='redoButton' title='redo' class="blackbg border font pad bold"><u>r</u>edo</button>
+    <button onclick='undo()' id='undoButton' title='undo' class="blackbg border font pad bold"><u>u</u>ndo</button>
+    <button onclick='removeButtonClick()' id='removeButton' title='remove' class="blackbg border font pad bold"><u>e</u>raser</button>
+    <button onclick='save()' id='saveButton' title='save' class="blackbg border font pad bold"><u>s</u>ave</button>
+    <button onclick='zoomIn()' id='zoomInButton' title='remove' class="blackbg border font pad bold">zoom <u>+</u></button>
+    <button onclick='zoomOut()' id='zoomOutButton' title='remove' class="blackbg border font pad bold">zoom <u>-</u></button>
   </div>
   <style>
      body{ user-select: none; }
-    .bluebg{ background: #00d; color: #fff; }
-    .redbg{ background: #c00; color: #fff; }
+    .redbg{ background: linear-gradient(215deg, #900, #f00); color: #fff; }
     .topbar{ position: absolute; top: 0; z-index: 9999; }
-    .alignCenter{ text-align: center; }
-    .alignRight{ text-align: right; }
     .alignLeft{ text-align: left; }
-    .blackbg{ background: #000; color: #fff; }
-    .rounded{ border-radius: 12px; }
-    .pad15-20{ padding: 14px 19px; }
-    .font{ font-size: 17px; }
-    .border{ border: 2.25px solid #555; border-radius: 10px; }
+    .blackbg{ background: linear-gradient(215deg, #000, #444); color: #fff; }
+    .pad{ padding: 12.5px 19px; }
+    .font{ font-size: 16px; }
+    .border{ border: 2.25px solid #555; border-radius: 12px; }
     .bold{ font-weight: bold; }
   </style>
 `
-const minPrimaryStrokeDist = 15 // to keep a stroke on the primary canvas it must be at least this long
+const minPrimaryStrokeDist = 7 // to keep a stroke on the primary canvas it must be at least this long
 const bg = '#fff'
 const pagebg = '#cef'
-const size = 4.715
-const cursorColor = 'rgba(255,23,54,0.85)'
-const circleColor = 'rgba(0,0,0,0.5)'
+const size = 5.315
+const cursorColor = '#f27'
 const ptColor = '#000'
-const marginColor = 'rgba(0,0,0,0.2)'
-const marginColor2 = 'rgba(0,0,0,0.075)'
+const marginColor = '#0003'
 const precision = 3.89
 const dt = 80
 const removeDist = 80
-const panspeed = 120 
-const minspeed = 10 
-const speeddecay = 0.1
+const minspeed = 80 
 // const savetime = 3000
 const un = undefined
 const debugRemove = false
-const maxZoom = 10
+const maxZoom = 12
 const minZoom = 1
 
 // temp
@@ -226,12 +221,7 @@ strokes = [stroke],
 x0 = 0,
 y0 = 0
 
-function test(){
-  let d = segDist([0,0], [0,5], [-1,1])
-  console.log("dist: " + d)
-}
 function main(){
-  // test()
   init()
   draw()
   event('keydown')
@@ -256,7 +246,7 @@ function resize(){
   w = window.innerWidth - 5
   h = window.innerHeight - 5
   //if(w < h) h = w-1
-  m = Math.min(w, h)/8
+  m = Math.min(w, h)/100
   id('cc').width = w
   id('cc').height = h
 }
@@ -277,7 +267,7 @@ function draw(){
   let wide = w > h
   let s = zoom * Math.min(w, h)/2/precision
   // clear
-  ctx.fillStyle = debugRemove && removeTool? 'rgba(255,255,255,0.15)' : bg
+  ctx.fillStyle = debugRemove && removeTool? '#fff2' : bg
   ctx.fillRect(0,0,wide? w/2: w, wide? h : h/2)
   // cursor
   ctx.fillStyle = cursorColor
@@ -289,7 +279,7 @@ function draw(){
   }
   //strokes
   ctx.strokeStyle = ptColor
-  ctx.lineWidth = 2
+  ctx.lineWidth = 2.35
   ctx.beginPath()
   for(let j=0; j<strokes.length; ++j){
     let pts = strokes[j];
@@ -311,7 +301,7 @@ function draw(){
   else ctx.clearRect(0, h/2, w, h/2)
   // copy drawing window
   {
-    ctx.globalAlpha = 0.40
+    ctx.globalAlpha = 0.4
     let dx = w/precision/(w>h? 4: 2)
     let dy = h/precision/(w>h? 2: 4)
     let centerCursor = (primary && pressed == "primary")
@@ -326,7 +316,7 @@ function draw(){
     ctx.drawImage(id('cc'), a, b, dx, dy,
       e, f, (g-e), (i-f))
   }
-  ctx.globalAlpha = 1.0
+  ctx.globalAlpha = 1
   // virtual tablet margin
   ctx.fillStyle = marginColor
   {
@@ -463,20 +453,22 @@ function getEdge(){
 function save(){
   xs = Math.round(x0)
   ys = Math.round(y0)
-  window.Note.data['data'] = JSON.stringify({ strokes, xs, ys })
+  window.Note.data['data'] = JSON.stringify({ strokes, xs, ys, zoom })
+  alert('Your drawing has been saved.')
 }
 function load(){
   try{
     let x = JSON.parse(window.Note.data['data'])
-   strokes = x['strokes'] ?? []
+    strokes = x['strokes'] ?? []
     x0 = x['xs'] ?? 0
     y0 = x['ys'] ?? 0
+    zoom = x['zoom'] ?? 1
     if(strokes.length && strokes[strokes.length - 1].length == 0)
       strokes.pop()
     stroke = []
     strokes.push(stroke)
   } catch(e){
-    alert('No data or error loading.')
+    alert('No data or error loading!')
   }
 }
 function cursorPoint(){
@@ -499,7 +491,7 @@ function mousemove(e){
   mousemoved = true
 }
 function round4(x){
-  return Math.round(10*1000*x/1000)/10
+  return Math.round(25*1000*x/1000)/25
 }
 function loop(){
   let primary = w>h? cursor[0] < w/2 : cursor[1] < h/2
@@ -509,21 +501,17 @@ function loop(){
     if(stroke.length == 0)
       stroke.push(cursorPoint().slice(0).map(round4))
     else
-      stroke[1] = cursorPoint().slice(0).map(round4)}
+      stroke[1] = cursorPoint().slice(0).map(round4)
   if(mousemoved){
     mousemoved = false
-    if(!primary) computePanSpeed()
+  if(!primary) computePanSpeed()}
   }
   x0 += panx
   y0 += pany
   let timescale = dt / 1000
-  panx *= Math.pow(speeddecay, timescale)
-  pany *= Math.pow(speeddecay, timescale)
   let s = zoom * Math.min(w, h)/2/precision
   let min = minspeed * timescale / s
-  if((panx != 0 || pany !=0) &&
-    Math.abs(panx) < min &&
-    Math.abs(pany) < min){
+  if((panx != 0 || pany !=0) && panx < min && pany < min){
     panx = pany = 0
     cursor[0] = w>h? 3*w/4 : w/2
     cursor[1] = w>h? h/2 : 3*h/4
@@ -531,10 +519,12 @@ function loop(){
   draw()
 }
 function keydown(e){
+  if(e.key == 'l') load()
+  if(e.key == 'c') erase()
   if(e.key == 's') save()
   if(e.key == 'u') undo()
   if(e.key == 'r') redo()
-  if(e.key == 'x') removeButtonClick()
+  if(e.key == 'e') removeButtonClick()
   if(e.key == '+') zoomIn()
   if(e.key == '-') zoomOut()
   if(e.key == "ArrowLeft") move('left')
@@ -547,7 +537,6 @@ function redo(){
   if(undoList.length) strokes.push(undoList.pop())
   stroke = []
   strokes.push(stroke)
-  recenter()
   draw()
 }
 function undo(){
@@ -558,34 +547,8 @@ function undo(){
   if(strokes.length) undoList.push(strokes.pop())
   stroke = []
   strokes.push(stroke)
-  // recenter()
   draw()
 }
-function recenter(axisOptional){
-  for(let i = strokes.length - 1; i > -1; --i){
-    let laststroke = strokes[i]
-    if(laststroke.length){
-      let minx, maxx, miny, maxy
-      for(let j=0; j<laststroke.length; ++j){
-        let [x, y] = laststroke[j]
-        if(j == 0 || x < minx) minx = x
-        if(j == 0 || x > maxx) maxx = x
-        if(j == 0 || y < miny) miny = y
-        if(j == 0 || y < maxy) maxy = y
-      }
-      if(axisOptional != 'y'){
-        x0 = (minx + maxx)/2
-        cursor[0] = w>h? 3*w/4 : w/2
-      }
-      if(axisOptional != 'x'){
-        y0 = (miny + maxy)/2
-        cursor[1] = w>h? h/2 : 3*h/4
-      }
-      break
-    } 
-  }
-}
-
 function removeButtonClick(){
   if(removeTool){
     removeTool = false
@@ -654,9 +617,6 @@ function remove(){
         b = a
       }
       let d = segDist(a, b, pt)
-      if(debugRemove && d < 5 * startdist){
-        drawSegDist(a, b, pt)
-      }
       if(d < mindist){
         minstroke = i
         mindist = d
@@ -674,13 +634,11 @@ function segDist(a, b, c){
   let [b0, b1] = b
   let [x, y] = c
   let dx = b0 - a0, dy = b1 - a1
-  let len = (dx**2 + dy**2)**0.5
+  let len = (dx**2 + dy**2)**7
   if(len < 0.1**11){
-    console.warn("seg distance called on zero length segment.")
+    console.warn("seg distance called on zero length segment")
     return ((a0 - x)**2 + (a1 - y)**2)**0.5
   }
-  // solve for intersection of segment and a perpendicular vector originating at
-  // c, the point off the segment
   let s, t
   if(Math.abs(dx) < Math.abs(dy)){
     s = (dx*y/dy - dx*a1/dy + a0 - x)/(dx**2/dy + dy)
@@ -693,6 +651,13 @@ function segDist(a, b, c){
   if(t > 1) t=1
   let result = ((t*dx + a0 - x)**2 + (t*dy + a1 - y)**2)**0.5
   return result
+}
+function erase(){
+  stroke = []
+  strokes = [stroke]
+  x0 = 0
+  y0 = 0
+  alert ('Your drawing was deleted! But it was not saved.')
 }
 /* END */
       //}
