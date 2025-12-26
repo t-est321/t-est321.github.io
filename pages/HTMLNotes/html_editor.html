@@ -4,7 +4,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
 /* CSS */
-*{ margin: 0; }
 body{ background: #05f; }
 #text1{
   box-sizing: border-box;
@@ -29,19 +28,17 @@ body{ background: #05f; }
 <!-- HTML -->
 <textarea id='text1'></textarea><br>
 <iframe id='frame1'></iframe><br>
-<a id="ct2d">This program does not save data!</a>
+<a id="ct2d">This program is in beta!</a>
 <!-- END -->
     </div>
     <div style="display: none;"></div>
     <script>
-      let datakey = "__ORBITAL_NOTES__:notedataid=7pOBtnJnbq"
+      let datakey = "__ORBITAL_NOTES__:notedataid=7f9S31Bkp0"
       let inframe = (window!=window.top)
       window.Note = {}
       window.Note.data =
 /* JSON */
-{
-  "textHtml": "<head></head>\n<body>Hi :3</body>"
-};
+"<a>Hi :3</a>";
 /* END */
       (function(){
         window.Note.save = saveData
@@ -163,20 +160,21 @@ body{ background: #05f; }
       //window.addEventListener('load', htmlNotesMainFunc)
       //function htmlNotesMainFunc(){
 /* JS */
-setInterval(update, 600)
-let data = window.Note.data
+// version 1.4.03
+// original gist.githubusercontent.com/derekmc/8fe6d62bdc07d0af10be87a7adfde0d2/raw/a6523c82964cd58dec44027d75621a8698d38f52/simple_editor.html
+setInterval(update, 300)
+let data = Note.data ?? {}
 
 window.addEventListener("load", init)
 setTimeout(init, 200)
 function init(){
-  frame1.srcdoc = text1.value = data.textHtml
+  frame1.srcdoc = text1.value = Note.data
   update()
 }
-
 function update(){
-  if(data.textHtml != text1.value){
-    frame1.srcdoc = data.textHtml = text1.value
-    window.addEventListener("save", init)
+  if(Note.data != text1.value){
+    frame1.srcdoc = Note.data = text1.value
+    Note.data = text1.value;
   }
 }
 /* END */
