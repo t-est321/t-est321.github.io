@@ -29,3 +29,7 @@ add midi_buttons.html
 **2025.12.23 16:39 GMT**
 
 update draw.html
+
+**2025.12.26 22:46 GMT**
+
+update html_editor.html
