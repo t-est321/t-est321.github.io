@@ -32,4 +32,8 @@ update draw.html
 
 **2025.12.26 22:46 GMT**
 
-update html_editor.html
+update html_editor.HTML
+
+**2026.01.06 16:11 GMT**
+
+update index.html
