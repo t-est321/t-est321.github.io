@@ -41,3 +41,7 @@ update index.html
 **2026.01.06 16:15 GMT**
 
 add JF.html
+
+**2026.02.06 19:48 GMT**
+
+update draw.html (Sorry for taking so long to update)
