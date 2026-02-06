@@ -2,6 +2,7 @@
 <!-- made from HTMLNotes -->
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Drawing Pro</title>
     <style>
 /* CSS */
 
@@ -22,7 +23,7 @@
       window.Note.data =
 /* JSON */
 {
-  "data": "{\"strokes\":[[]],\"xs\":0,\"ys\":0,\"zoom\":1}"
+  "data": "{\"strokes\":[[]],\"xs\":0,\"ys\":0,\"zoom\":2}"
 };
 /* END */
       (function(){
@@ -145,7 +146,7 @@
       //window.addEventListener('load', htmlNotesMainFunc)
       //function htmlNotesMainFunc(){
 /* JS */
-// version 2.8.02
+// version 2.9.42
 // original derekmc.gitlab.io/projects/precisiondraw/precisiondraw.html
 onload(main)
 function onload(x){
@@ -163,25 +164,66 @@ function style(name, value){ document.body.style[name] = value}
 let doc = `
   <canvas id='cc'></canvas>
   <div class='topbar alignLeft'>
-    <button onclick='erase()' id='clearButton' title='clear' class="redbg border font pad bold"><u>c</u>lear</button>
-    <button onclick='load()' id='loadButton' title='load' class="blackbg border font pad bold"><u>l</u>oad</button>
-    <button onclick='redo()' id='redoButton' title='redo' class="blackbg border font pad bold"><u>r</u>edo</button>
-    <button onclick='undo()' id='undoButton' title='undo' class="blackbg border font pad bold"><u>u</u>ndo</button>
-    <button onclick='removeButtonClick()' id='removeButton' title='remove' class="blackbg border font pad bold"><u>e</u>raser</button>
-    <button onclick='save()' id='saveButton' title='save' class="blackbg border font pad bold"><u>s</u>ave</button>
-    <button onclick='zoomIn()' id='zoomInButton' title='remove' class="blackbg border font pad bold">zoom <u>+</u></button>
-    <button onclick='zoomOut()' id='zoomOutButton' title='remove' class="blackbg border font pad bold">zoom <u>-</u></button>
+    <button onclick='erase()' id='clearButton' title='clear' class="redbg border font pad bold"><u>C</u>lear</button>
+    <button onclick='loadButton()' id='loadButton' title='load' class="blackbg border font pad bold"><u>L</u>oad</button>
+    <button onclick='redo()' id='redoButton' title='redo' class="blackbg border font pad bold"><u>R</u>edo</button>
+    <button onclick='undo()' id='undoButton' title='undo' class="blackbg border font pad bold"><u>U</u>ndo</button>
+    <button onclick='removeButtonClick()' id='removeButton' title='remove' class="blackbg border font pad bold"><u>E</u>raser</button>
+    <button onclick='exportData()' class="blackbg border font pad bold">E<u>x</u>port</button>
+    <button onclick='importData()' class="blackbg border font pad bold"><u>I</u>mport</button>
+    <button onclick='save()' id='saveButton' title='save' class="blackbg border font pad bold"><u>S</u>ave</button>
+    <button onclick='zoomIn()' id='zoomInButton' title='remove' class="blackbg border font pad bold">Zoom <u>+</u></button>
+    <button onclick='zoomOut()' id='zoomOutButton' title='remove' class="blackbg border font pad bold">Zoom <u>-</u></button>
   </div>
   <style>
-     body{ user-select: none; }
-    .redbg{ background: linear-gradient(215deg, #900, #f00); color: #fff; }
-    .topbar{ position: absolute; top: 0; z-index: 9999; }
-    .alignLeft{ text-align: left; }
-    .blackbg{ background: linear-gradient(215deg, #000, #444); color: #fff; }
-    .pad{ padding: 12.5px 19px; }
-    .font{ font-size: 16px; }
-    .border{ border: 2.25px solid #555; border-radius: 12px; }
-    .bold{ font-weight: bold; }
+    body {
+      user-select: none;
+    }
+    .redbg {
+      background: linear-gradient(215deg, #900, #f00);
+      color: #fff;
+    }
+    .topbar { 
+      position: absolute; 
+      top: 0; 
+      z-index: 9999; 
+      animation: slideDown 0.5s ease-out forwards;
+    }
+    .alignLeft { text-align: left; }
+    .blackbg {
+      background: linear-gradient(215deg, #000, #444);
+      color: #fff;
+    }
+    .pad {
+      padding: 12.5px 19px;
+    }
+    .font {
+      font-size: 16px;
+    }
+    .border {
+      border: 2.25px solid #444;
+      border-radius: 12px;
+    }
+    .bold {
+      font-weight: bold;
+    }
+    /* Animation for the bar */
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    /* Interaction effects */
+    button {
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    button:active {
+      filter: brightness(1.4);
+      transform: scale(0.95);
+    }
+    button:hover {
+      filter: contrast(1.2);
+    }
   </style>
 `
 const minPrimaryStrokeDist = 7 // to keep a stroke on the primary canvas it must be at least this long
@@ -279,7 +321,7 @@ function draw(){
   }
   //strokes
   ctx.strokeStyle = ptColor
-  ctx.lineWidth = 2.35
+  ctx.lineWidth = 2.375
   ctx.beginPath()
   for(let j=0; j<strokes.length; ++j){
     let pts = strokes[j];
@@ -335,6 +377,30 @@ function draw(){
   ctx.lineTo(a, b)
   ctx.fill()
   }
+}
+function exportData(){
+  let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ strokes, x0, y0, zoom }));
+  let dowAnNo = document.createElement('a');
+  dowAnNo.setAttribute("href", dataStr);
+  dowAnNo.setAttribute("download", "drawing_data.json");
+  document.body.appendChild(dowAnNo);
+  dowAnNo.click();
+  dowAnNo.remove();
+}
+function importData(){
+  let input = document.createElement('input');
+  input.type = 'file';
+  input.onchange = e => {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+    reader.onload = readerEvent => {
+      let content = JSON.parse(readerEvent.target.result);
+      strokes = content.strokes; x0 = content.x0; y0 = content.y0; zoom = content.zoom;
+      stroke = strokes[strokes.length-1]; draw();
+    }
+    reader.readAsText(file);
+  }
+  input.click();
 }
 function mousedown(e){
   cursor[0] = cursordown[0] = e.clientX
@@ -451,24 +517,31 @@ function getEdge(){
   return edge
 }
 function save(){
-  xs = Math.round(x0)
-  ys = Math.round(y0)
-  window.Note.data['data'] = JSON.stringify({ strokes, xs, ys, zoom })
+  window.Note.data['data'] = JSON.stringify({ strokes, x0, y0, zoom })
   alert('Your drawing has been saved.')
 }
 function load(){
   try{
     let x = JSON.parse(window.Note.data['data'])
     strokes = x['strokes'] ?? []
-    x0 = x['xs'] ?? 0
-    y0 = x['ys'] ?? 0
+    x0 = x['x0'] ?? 0
+    y0 = x['y0'] ?? 0
     zoom = x['zoom'] ?? 1
     if(strokes.length && strokes[strokes.length - 1].length == 0)
       strokes.pop()
     stroke = []
     strokes.push(stroke)
   } catch(e){
-    alert('No data or error loading!')
+    alert('No data or error loading :(')
+  }
+}
+function loadButton(){
+  const confirmed = confirm("Are you sure you want to load your drawing? This action cannot be undone.");
+  if (confirmed) {
+    load()
+    alert("Your drawing has been loaded");
+  } else {
+    console.log("Drawing loaded by user.");
   }
 }
 function cursorPoint(){
@@ -496,35 +569,45 @@ function round4(x){
 function loop(){
   let primary = w>h? cursor[0] < w/2 : cursor[1] < h/2
   if(!primary && pressed == "secondary"){
-    stroke.push(cursorPoint().slice(0).map(round4))}
+    let newPt = cursorPoint().slice(0).map(round4);
+      if (stroke.length === 0 || 
+        newPt[0] !== stroke[stroke.length-1][0] || 
+        newPt[1] !== stroke[stroke.length-1][1]) {
+      stroke.push(newPt);
+    }
+  }
   if(primary && pressed == "primary"){
+    let newPt = cursorPoint().slice(0).map(round4);
     if(stroke.length == 0)
-      stroke.push(cursorPoint().slice(0).map(round4))
+      stroke.push(newPt);
     else
-      stroke[1] = cursorPoint().slice(0).map(round4)
-  if(mousemoved){
-    mousemoved = false
-  if(!primary) computePanSpeed()}
+      stroke[1] = newPt;
+    if(mousemoved){
+      mousemoved = false;
+      if(!primary) computePanSpeed();
+    }
   }
-  x0 += panx
-  y0 += pany
-  let timescale = dt / 1000
-  let s = zoom * Math.min(w, h)/2/precision
-  let min = minspeed * timescale / s
-  if((panx != 0 || pany !=0) && panx < min && pany < min){
-    panx = pany = 0
-    cursor[0] = w>h? 3*w/4 : w/2
-    cursor[1] = w>h? h/2 : 3*h/4
+  x0 += panx;
+  y0 += pany;
+  let timescale = dt / 1000;
+  let s = zoom * Math.min(w, h)/2/precision;
+  let min = minspeed * timescale / s;
+  if((panx != 0 || pany !=0) && Math.abs(panx) < min && Math.abs(pany) < min){
+    panx = pany = 0;
+    cursor[0] = w>h? 3*w/4 : w/2;
+    cursor[1] = w>h? h/2 : 3*h/4;
   }
-  draw()
+  draw();
 }
 function keydown(e){
-  if(e.key == 'l') load()
+  if(e.key == 'l') loadButton()
   if(e.key == 'c') erase()
   if(e.key == 's') save()
   if(e.key == 'u') undo()
   if(e.key == 'r') redo()
   if(e.key == 'e') removeButtonClick()
+  if(e.key == 'x') exportData()
+  if(e.key == 'i') importData()
   if(e.key == '+') zoomIn()
   if(e.key == '-') zoomOut()
   if(e.key == "ArrowLeft") move('left')
@@ -592,7 +675,7 @@ function drawSegDist(a, b, c){
   if(len2 > removeDist / precision){
     xx = xx + dxx * removeDist / len2 / precision
     yy = yy + dyy * removeDist / len2 / precision
-    ctx.strokeStyle = "rgba(0,0,255, 0.1)"
+    ctx.strokeStyle = "#00f1"
   }
   ctx.beginPath()
   ctx.moveTo(xx, yy)
@@ -604,7 +687,7 @@ function drawSegDist(a, b, c){
 function remove(){
   let pt = cursorPoint()
   let startdist = removeDist / Math.min(w, h) * precision
-  let mindist = 5000
+  let mindist = 2500
   let minstroke = -1
   for(let i=0; i<strokes.length; ++i){
     let stroke = strokes[i]
@@ -652,15 +735,20 @@ function segDist(a, b, c){
   let result = ((t*dx + a0 - x)**2 + (t*dy + a1 - y)**2)**0.5
   return result
 }
-function erase(){
-  stroke = []
-  strokes = [stroke]
-  x0 = 0
-  y0 = 0
-  alert ('Your drawing was deleted! But it was not saved.')
+function erase() {
+  const confirmed = confirm("Are you sure you want to clear your drawing? This action cannot be undone.");
+  if (confirmed) {
+    stroke = [];
+    strokes = [stroke];
+    x0 = 0;
+    y0 = 0;
+    alert("Your drawing has been cleared!");
+  } else {
+    console.log("Drawing cleared by user.");
+  }
 }
 /* END */
       //}
     </script>
   </body>
-<html>
+</html>
