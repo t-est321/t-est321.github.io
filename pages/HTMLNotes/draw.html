@@ -17,7 +17,7 @@
     </div>
     <div style="display: none;"></div>
     <script>
-      let datakey = "__ORBITAL_NOTES__:notedataid=IFFiFOQvc5"
+      let datakey = "__ORBITAL_NOTES__:notedataid=f72D5ac1X2"
       let inframe = (window!=window.top)
       window.Note = {}
       window.Note.data =
@@ -146,7 +146,7 @@
       //window.addEventListener('load', htmlNotesMainFunc)
       //function htmlNotesMainFunc(){
 /* JS */
-// version 2.9.42
+// version 2.9.53
 // original derekmc.gitlab.io/projects/precisiondraw/precisiondraw.html
 onload(main)
 function onload(x){
@@ -387,19 +387,35 @@ function exportData(){
   dowAnNo.click();
   dowAnNo.remove();
 }
-function importData(){
+function importData() {
   let input = document.createElement('input');
   input.type = 'file';
+  input.accept = '.json';
   input.onchange = e => {
     let file = e.target.files[0];
+    if (!file) return;
     let reader = new FileReader();
     reader.onload = readerEvent => {
-      let content = JSON.parse(readerEvent.target.result);
-      strokes = content.strokes; x0 = content.x0; y0 = content.y0; zoom = content.zoom;
-      stroke = strokes[strokes.length-1]; draw();
-    }
+      try {
+        let content = JSON.parse(readerEvent.target.result);
+        if (content.strokes && content.x0 !== undefined) {
+          strokes = content.strokes;
+          x0 = content.x0;
+          y0 = content.y0;
+          zoom = content.zoom;
+          stroke = strokes[strokes.length - 1];
+          draw();
+        } else {
+          throw new Error("Invalid data format");
+        }
+      } catch (err) {
+        alert("Error: Failed to load file. The data format is incorrect.");
+        console.error(err);
+      }
+    };
+    reader.onerror = () => alert("Error: Could not read the file.");
     reader.readAsText(file);
-  }
+  };
   input.click();
 }
 function mousedown(e){
