@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Access</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+    #lock{display:flex;flex-direction:column;align-items:center;gap:14px;padding:32px;background:#111;border-radius:10px;width:100%;max-width:360px;}
+    h2{font-size:22px;color:#fff;}
+    input{padding:12px;width:100%;border:1px solid #333;border-radius:5px;background:#1a1a1a;color:#fff;font-size:16px;outline:none;}
+    input:focus{border-color:#555;}
+    button{padding:12px;width:100%;background:#28a745;color:#fff;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;}
+    button:hover{background:#218838;}
+    #msg{font-size:14px;color:#f90;text-align:center;min-height:18px;}
+    #timer-block{display:none;flex-direction:column;align-items:center;gap:10px;text-align:center;}
+    #timer-block p{color:#aaa;font-size:14px;}
+    #timer-display{font-size:28px;font-weight:bold;color:#f44;font-family:monospace;}
+    #content{display:none;padding:32px;max-width:700px;margin:0 auto;line-height:1.8;font-size:16px;color:#ddd;}
+  </style>
+</head>
+<body>
+<div id="lock">
+  <h2>🔐 Enter Password</h2>
+  <input type="password" id="pass" placeholder="Password" onkeydown="if(event.key==='Enter')check()">
+  <button onclick="check()">Unlock</button>
+  <div id="msg"></div>
+  <div id="timer-block">
+    <p>Too many wrong attempts.<br>Try again after:</p>
+    <div id="timer-display">24:00:00</div>
+  </div>
+</div>
+<div id="content">
+  <p>Wow</p><br>
+  <p>You are logged in to the developer's page ;3</p>
+  <a href="https://t-est321.github.io/pages/Data_view.html">Data view (DEMO)</a>
+</div>
+<script>
+  // Password is never stored — only checked at runtime
+  function _getPass() {
+    const c = [
+      80,57,87,57,119,102,83,107,56,95,105,94,40,33,112,38,95,70,112,104,67,101,94,55,33,74,42,94
+    ];
+    return c.map(n => String.fromCharCode(n)).join('');
+  }
+  const STORE_KEY = 'Pass-timer';
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_MS = 24 * 60 * 60 * 1000;
+  let timerInterval = null;
+  function getState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+  function saveState(obj) {
+    localStorage.setItem(STORE_KEY, JSON.stringify(obj));
+  }
+  function formatDate(ts) {
+    const d = new Date(ts);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`;
+  }
+  function showLocked(until) {
+    document.getElementById('msg').textContent = '';
+    document.getElementById('pass').style.display = 'none';
+    document.querySelector('button').style.display = 'none';
+    const tb = document.getElementById('timer-block');
+    tb.style.display = 'flex';
+    if (timerInterval) clearInterval(timerInterval);
+    function tick() {
+      const now = Date.now();
+      const left = until - now;
+      if (left <= 0) {
+        clearInterval(timerInterval);
+        // Reset attempts, show input again
+        saveState({ attempts: 0, lockedUntil: null });
+        document.getElementById('pass').style.display = '';
+        document.querySelector('button').style.display = '';
+        tb.style.display = 'none';
+        document.getElementById('pass').value = '';
+        document.getElementById('msg').textContent = 'You can try again.';
+        return;
+      }
+      const h = Math.floor(left / 3600000);
+      const m = Math.floor((left % 3600000) / 60000);
+      const s = Math.floor((left % 60000) / 1000);
+      const pad = n => String(n).padStart(2, '0');
+      document.getElementById('timer-display').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+  function check() {
+    let state = getState() || { attempts: 0, lockedUntil: null };
+    // Check if currently locked
+    if (state.lockedUntil && Date.now() < state.lockedUntil) {
+      showLocked(state.lockedUntil);
+      return;
+    }
+    const input = document.getElementById('pass').value;
+    const msg = document.getElementById('msg');
+    if (input === _getPass()) {
+      // Correct — clear state, show content
+      saveState({ attempts: 0, lockedUntil: null });
+      document.getElementById('lock').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+    } else {
+      // Wrong
+      state.attempts = (state.attempts || 0) + 1;
+      if (state.attempts >= MAX_ATTEMPTS) {
+        const until = Date.now() + LOCKOUT_MS;
+        state.lockedUntil = until;
+        state.lockedAt = formatDate(Date.now());
+        state.attempts = MAX_ATTEMPTS;
+        saveState(state);
+        showLocked(until);
+      } else {
+        const left = MAX_ATTEMPTS - state.attempts;
+        saveState(state);
+        msg.textContent = `Wrong password. ${left} attempt${left !== 1 ? 's' : ''} left.`;
+        document.getElementById('pass').value = '';
+      }
+    }
+  }
+  // On page load — check if already locked
+  (function init() {
+    const state = getState();
+    if (state && state.lockedUntil && Date.now() < state.lockedUntil) {
+      showLocked(state.lockedUntil);
+    }
+  })();
+</script>
+</body>
+</html>
