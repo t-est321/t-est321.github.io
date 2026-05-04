@@ -56,6 +56,6 @@ update html_editor.html
 
 added Access.html
 
-added Data_view.html
+added Data_edit.html
 
 update index.html
