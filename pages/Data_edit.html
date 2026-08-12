@@ -1,902 +1,728 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Storage Manager</title>
-<style>
-  :root {
-    --bg: #f5f7fa;
-    --surface: #ffffff;
-    --surface2: #f8fafb;
-    --border: #e1e8ed;
-    --primary: #0066ff;
-    --primary-hover: #0052cc;
-    --danger: #ff3b30;
-    --danger-hover: #cc2f26;
-    --success: #34c759;
-    --warning: #ff9500;
-    --text: #1c1e21;
-    --text-muted: #65676b;
-    --log-bg: #1a1d23;
-    --log-text: #e4e6eb;
-    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 4px rgba(0,0,0,.04);
-    --shadow-md: 0 4px 8px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
-    --shadow-lg: 0 8px 16px rgba(0,0,0,.12);
-    --radius: 10px;
-    --radius-sm: 6px;
-    --tag-cookie: #ff9500;
-    --tag-ls: #0066ff;
-    --tag-idb: #af52de;
-  }
-  [data-theme="dark"] {
-    --bg: #18191a;
-    --surface: #242526;
-    --surface2: #1c1e21;
-    --border: #3a3b3c;
-    --primary: #2d88ff;
-    --primary-hover: #0066ff;
-    --danger: #ff453a;
-    --danger-hover: #ff3b30;
-    --success: #32d74b;
-    --warning: #ff9f0a;
-    --text: #e4e6eb;
-    --text-muted: #b0b3b8;
-    --log-bg: #0d0e0f;
-    --log-text: #b0b3b8;
-    --shadow: 0 1px 2px rgba(0,0,0,.3);
-    --shadow-md: 0 4px 8px rgba(0,0,0,.4);
-    --shadow-lg: 0 8px 16px rgba(0,0,0,.5);
-  }
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    transition: background .4s ease, color .4s ease;
-    line-height: 1.5;
-  }
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    backdrop-filter: blur(8px);
-    transition: all .3s ease;
-  }
-  .header-inner {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-  .header-title {
-    font-size: 19px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    flex: 1;
-    min-width: 180px;
-    transition: transform .3s ease;
-  }
-  .header-title:hover {
-    transform: translateY(-1px);
-  }
-  .header-title span {
-    font-size: 24px;
-    transition: transform .3s ease;
-  }
-  .header-title:hover span {
-    transform: rotate(-10deg);
-  }
-  .header-actions {
-    display: flex;
-    gap: 7px;
-    flex-wrap: wrap;
-  }
-  main {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 24px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    transition: box-shadow .3s ease, transform .3s ease;
-  }
-  .card:hover {
-    box-shadow: var(--shadow-md);
-  }
-  .card-header {
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    background: var(--surface2);
-    transition: background .3s ease;
-  }
-  .card-header h3 {
-    font-size: 15px;
-    font-weight: 600;
-    flex: 1;
-  }
-  .card-body {
-    padding: 18px;
-  }
-  .tabs {
-    display: flex;
-    gap: 0;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    position: relative;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-  }
-  .tabs::-webkit-scrollbar {
-    height: 3px;
-  }
-  .tabs::-webkit-scrollbar-track {
-    background: var(--surface2);
-  }
-  .tabs::-webkit-scrollbar-thumb {
-    background: var(--primary);
-    border-radius: 3px;
-  }
-  .tab-btn {
-    flex: 1;
-    min-width: 140px;
-    padding: 13px 10px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: all .3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    position: relative;
-  }
-  .tab-btn::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--primary);
-    transform: scaleX(0);
-    transition: transform .3s ease;
-  }
-  .tab-btn:hover {
-    color: var(--primary);
-    background: rgba(0,102,255,.05);
-    transform: translateY(-2px);
-  }
-  .tab-btn.active {
-    color: var(--primary);
-    background: var(--surface);
-    font-weight: 600;
-  }
-  .tab-btn.active::before {
-    transform: scaleX(1);
-  }
-  .tab-icon {
-    font-size: 17px;
-    transition: transform .3s ease;
-  }
-  .tab-btn:hover .tab-icon {
-    transform: scale(1.15);
-  }
-  .badge {
-    background: var(--primary);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 12px;
-    min-width: 20px;
-    text-align: center;
-    transition: transform .3s ease, background .3s ease;
-  }
-  .tab-btn:hover .badge {
-    transform: scale(1.1);
-  }
-  .badge.cookie {
-    background: var(--tag-cookie);
-  }
-  .badge.ls {
-    background: var(--tag-ls);
-  }
-  .badge.idb {
-    background: var(--tag-idb);
-  }
-  .tab-panel {
-    display: none;
-    animation: fadeIn .4s ease;
-  }
-  .tab-panel.active {
-    display: block;
-  }
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storage Manager</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --surface2: #f8fafb;
+      --border: #e1e8ed;
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --danger: #ff3b30;
+      --danger-hover: #cc2f26;
+      --success: #34c759;
+      --warning: #ff9500;
+      --text: #1c1e21;
+      --text-muted: #65676b;
+      --log-bg: #1a1d23;
+      --log-text: #e4e6eb;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 4px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 8px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+      --shadow-lg: 0 8px 16px rgba(0,0,0,.12);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --tag-cookie: #ff9500;
+      --tag-ls: #0066ff;
+      --tag-idb: #af52de;
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
+    [data-theme="dark"] {
+      --bg: #18191a;
+      --surface: #242526;
+      --surface2: #1c1e21;
+      --border: #3a3b3c;
+      --primary: #2d88ff;
+      --primary-hover: #0066ff;
+      --danger: #ff453a;
+      --danger-hover: #ff3b30;
+      --success: #32d74b;
+      --warning: #ff9f0a;
+      --text: #e4e6eb;
+      --text-muted: #b0b3b8;
+      --log-bg: #0d0e0f;
+      --log-text: #b0b3b8;
+      --shadow: 0 1px 2px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 8px rgba(0,0,0,.4);
+      --shadow-lg: 0 8px 16px rgba(0,0,0,.5);
     }
-  }
-  .input-row {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-    min-width: 140px;
-  }
-  .input-group label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    transition: color .3s ease;
-  }
-  input[type="text"],
-  input[type="number"],
-  select,
-  textarea {
-    width: 100%;
-    padding: 9px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    background: var(--surface2);
-    color: var(--text);
-    transition: all .3s ease;
-    font-family: inherit;
-  }
-  input:hover,
-  select:hover,
-  textarea:hover {
-    border-color: var(--primary);
-  }
-  input:focus,
-  select:focus,
-  textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0,102,255,.1);
-    transform: translateY(-1px);
-  }
-  textarea {
-    resize: vertical;
-    min-height: 80px;
-    font-family: 'SF Mono', Consolas, monospace;
-    font-size: 13px;
-  }
-  .btn {
-    padding: 9px 16px;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all .3s ease;
-    white-space: nowrap;
-    box-shadow: var(--shadow);
-  }
-  .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-  .btn:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow);
-  }
-  .btn-primary {
-    background: var(--primary);
-    color: #fff;
-  }
-  .btn-primary:hover {
-    background: var(--primary-hover);
-  }
-  .btn-danger {
-    background: var(--danger);
-    color: #fff;
-  }
-  .btn-danger:hover {
-    background: var(--danger-hover);
-  }
-  .btn-ghost {
-    background: var(--surface2);
-    color: var(--text);
-    border: 1.5px solid var(--border);
-    box-shadow: none;
-  }
-  .btn-ghost:hover {
-    background: var(--border);
-  }
-  .btn-success {
-    background: var(--success);
-    color: #fff;
-  }
-  .btn-warning {
-    background: var(--warning);
-    color: #fff;
-  }
-  .btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-  }
-  .action-row {
-    display: flex;
-    gap: 7px;
-    flex-wrap: wrap;
-    margin-top: 14px;
-  }
-  .data-table-wrap {
-    overflow-x: auto;
-    overflow-y: auto;
-    max-height: 500px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    margin-top: 14px;
-    scroll-behavior: smooth;
-  }
-  .data-table-wrap::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  .data-table-wrap::-webkit-scrollbar-track {
-    background: var(--surface2);
-    border-radius: 4px;
-  }
-  .data-table-wrap::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 4px;
-    transition: background .3s ease;
-  }
-  .data-table-wrap::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-  }
-  table {
-    width: 100%;
-    min-width: 600px;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  thead {
-    background: var(--surface2);
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-  th {
-    padding: 11px 14px;
-    text-align: left;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    transition: background .3s ease;
-  }
-  td {
-    padding: 11px 14px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-    word-break: break-word;
-    transition: background .3s ease;
-  }
-  tr:last-child td {
-    border-bottom: none;
-  }
-  tbody tr {
-    transition: all .3s ease;
-  }
-  tbody tr:hover td {
-    background: var(--surface2);
-    transform: scale(1.01);
-  }
-  .td-key {
-    font-weight: 600;
-    color: var(--primary);
-    font-family: 'SF Mono', Consolas, monospace;
-    white-space: nowrap;
-  }
-  .td-val {
-    font-family: 'SF Mono', Consolas, monospace;
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .td-actions {
-    white-space: nowrap;
-    display: flex;
-    gap: 5px;
-  }
-  .empty-state {
-    text-align: center;
-    padding: 40px 18px;
-    color: var(--text-muted);
-    font-size: 14px;
-    animation: fadeIn .5s ease;
-  }
-  .empty-state .empty-icon {
-    font-size: 42px;
-    margin-bottom: 10px;
-    opacity: .5;
-    animation: float 3s ease-in-out infinite;
-  }
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0);
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background .4s ease, color .4s ease;
+      line-height: 1.5;
     }
-    50% {
-      transform: translateY(-10px);
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-radius: 0 0 12% 12%;
+      backdrop-filter: blur(8px);
+      transition: all .3s ease;
     }
-  }
-  .log-panel {
-    background: var(--log-bg);
-    border-radius: var(--radius-sm);
-    padding: 14px 16px;
-    font-family: 'SF Mono', Consolas, monospace;
-    font-size: 13px;
-    color: var(--log-text);
-    min-height: 60px;
-    max-height: 220px;
-    overflow-y: auto;
-    transition: all .3s ease;
-    scroll-behavior: smooth;
-  }
-  .log-panel::-webkit-scrollbar {
-    width: 6px;
-  }
-  .log-panel::-webkit-scrollbar-track {
-    background: rgba(0,0,0,.2);
-    border-radius: 3px;
-  }
-  .log-panel::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,.3);
-    border-radius: 3px;
-  }
-  .log-line {
-    padding: 3px 0;
-    line-height: 1.6;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    animation: slideInLeft .3s ease;
-  }
-  @keyframes slideInLeft {
-    from {
-      opacity: 0;
-      transform: translateX(-10px);
+    .header-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
     }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-  .log-line .log-time {
-    color: #6c757d;
-    font-size: 11px;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-  .log-line .log-msg {
-    flex: 1;
-  }
-  .log-line.ok .log-msg {
-    color: #32d74b;
-  }
-  .log-line.err .log-msg {
-    color: #ff453a;
-  }
-  .log-line.info .log-msg {
-    color: #2d88ff;
-  }
-  .log-line.warn .log-msg {
-    color: #ff9f0a;
-  }
-  .section-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    margin-bottom: 10px;
-  }
-  .cookie-extra {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-  }
-  .cookie-extra .input-group {
-    min-width: 100px;
-  }
-  .search-wrap {
-    position: relative;
-    flex: 1;
-    min-width: 140px;
-  }
-  .search-wrap input {
-    padding-left: 34px;
-  }
-  .search-icon {
-    position: absolute;
-    left: 11px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    font-size: 15px;
-    pointer-events: none;
-    transition: all .3s ease;
-  }
-  .search-wrap input:focus ~ .search-icon {
-    color: var(--primary);
-    transform: translateY(-50%) scale(1.1);
-  }
-  .status-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--success);
-    display: inline-block;
-    margin-right: 5px;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: .5;
-      transform: scale(.9);
-    }
-  }
-  .idb-db-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
-    padding: 12px;
-    background: var(--surface2);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    transition: all .3s ease;
-  }
-  .idb-db-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 10px;
-    background: var(--surface);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    font-size: 13px;
-    gap: 10px;
-    transition: all .3s ease;
-    animation: fadeIn .4s ease;
-  }
-  .idb-db-item:hover {
-    transform: translateX(5px);
-    box-shadow: var(--shadow-md);
-  }
-  .idb-db-name {
-    font-weight: 600;
-    color: var(--primary);
-    font-family: 'SF Mono', Consolas, monospace;
-    flex: 1;
-  }
-  .idb-db-stores {
-    font-size: 11px;
-    color: var(--text-muted);
-    background: var(--surface2);
-    padding: 2px 8px;
-    border-radius: 10px;
-    transition: all .3s ease;
-  }
-  .idb-db-item:hover .idb-db-stores {
-    background: var(--primary);
-    color: #fff;
-  }
-  .idb-store-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-  }
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    transition: all .3s ease;
-  }
-  .pill:hover {
-    transform: scale(1.05);
-  }
-  .pill-cookie {
-    background: rgba(255,149,0,.15);
-    color: var(--tag-cookie);
-  }
-  .pill-ls {
-    background: rgba(0,102,255,.15);
-    color: var(--tag-ls);
-  }
-  .pill-idb {
-    background: rgba(175,82,222,.15);
-    color: var(--tag-idb);
-  }
-  .confirm-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.6);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-    animation: fadeIn .3s ease;
-  }
-  .confirm-overlay.show {
-    display: flex;
-  }
-  .confirm-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 26px;
-    max-width: 360px;
-    width: 92%;
-    box-shadow: var(--shadow-lg);
-    animation: scaleIn .3s ease;
-  }
-  @keyframes scaleIn {
-    from {
-      opacity: 0;
-      transform: scale(.9);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-  .confirm-box h4 {
-    font-size: 17px;
-    margin-bottom: 10px;
-    font-weight: 700;
-  }
-  .confirm-box p {
-    font-size: 14px;
-    color: var(--text-muted);
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
-  .confirm-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-  }
-  .edit-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.6);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-    animation: fadeIn .3s ease;
-  }
-  .edit-overlay.show {
-    display: flex;
-  }
-  .edit-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 22px;
-    max-width: 520px;
-    width: 96%;
-    box-shadow: var(--shadow-lg);
-    animation: scaleIn .3s ease;
-  }
-  .edit-box h4 {
-    font-size: 16px;
-    margin-bottom: 16px;
-    font-weight: 700;
-  }
-  .edit-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 16px;
-  }
-  @media (max-width: 600px) {
     .header-title {
-      font-size: 16px;
+      font-size: 19px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex: 1;
+      min-width: 180px;
+      transition: transform .3s ease;
     }
+    .header-title:hover { transform: translateY(-1px); }
+    .header-title span { font-size: 24px; transition: transform .3s ease; }
+    .header-title:hover span { transform: rotate(-10deg); }
+    .header-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: box-shadow .3s ease;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: var(--surface2);
+      transition: background .3s ease;
+    }
+    .card-header h3 { font-size: 15px; font-weight: 600; flex: 1; }
+    .card-body { padding: 18px; }
+    .tabs {
+      display: flex;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tabs::-webkit-scrollbar { height: 3px; }
+    .tabs::-webkit-scrollbar-track { background: var(--surface2); }
+    .tabs::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
     .tab-btn {
-      font-size: 13px;
-      padding: 11px 6px;
-      min-width: 120px;
+      flex: 1;
+      min-width: 140px;
+      padding: 13px 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all .3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
     }
-    .tab-icon {
-      font-size: 15px;
+    .tab-btn:hover { color: var(--primary); background: rgba(0,102,255,.05); transform: translateY(-2px); }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--surface); font-weight: 600; }
+    .tab-icon { font-size: 17px; transition: transform .3s ease; }
+    .tab-btn:hover .tab-icon { transform: scale(1.15); }
+    .badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 12px;
+      min-width: 20px;
+      text-align: center;
+      transition: transform .3s ease, background .3s ease;
     }
-    th, td {
-      padding: 9px 10px;
+    .tab-btn:hover .badge { transform: scale(1.1); }
+    .badge.cookie { background: var(--tag-cookie); }
+    .badge.ls { background: var(--tag-ls); }
+    .badge.idb { background: var(--tag-idb); }
+    .tab-panel { display: none; animation: fadeIn .35s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .td-key, .td-val {
-      max-width: 150px;
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(.9); }
+    }
+    .input-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .input-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+    .input-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      background: var(--surface2);
+      color: var(--text);
+      transition: all .3s ease;
+      font-family: inherit;
+    }
+    input:hover, select:hover, textarea:hover { border-color: var(--primary); }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,102,255,.1);
+    }
+    textarea { resize: vertical; min-height: 80px; font-family: 'SF Mono', Consolas, monospace; font-size: 13px; }
+    .btn {
+      padding: 9px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .3s ease;
+      white-space: nowrap;
+      box-shadow: var(--shadow);
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .btn:active { transform: translateY(0); box-shadow: var(--shadow); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: var(--danger-hover); }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); box-shadow: none; }
+    .btn-ghost:hover { background: var(--border); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-warning { background: var(--warning); color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .action-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
+    .data-table-wrap {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 420px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      margin-top: 14px;
+      scroll-behavior: smooth;
+    }
+    .data-table-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+    .data-table-wrap::-webkit-scrollbar-track { background: var(--surface2); border-radius: 4px; }
+    .data-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .data-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--surface2); position: sticky; top: 0; z-index: 1; }
+    th {
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr { transition: background .2s ease; }
+    tbody tr:hover td { background: var(--surface2); }
+    .td-key {
+      font-weight: 600;
+      color: var(--primary);
+      font-family: 'SF Mono', Consolas, monospace;
+      white-space: nowrap;
+      max-width: 200px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    main {
-      padding: 16px 12px;
+    .td-val {
+      font-family: 'SF Mono', Consolas, monospace;
+      color: var(--text);
+      white-space: nowrap;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-  }
-  .toast-container {
-    position: fixed;
-    bottom: 24px;
-    right: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 200;
-  }
-  .toast {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: var(--shadow-lg);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    animation: slideInRight .4s ease;
-    max-width: 300px;
-  }
-  @keyframes slideInRight {
-    from {
-      opacity: 0;
-      transform: translateX(40px);
+    .td-full { white-space: normal; word-break: break-all; max-width: none; }
+    .td-actions { white-space: nowrap; display: flex; gap: 5px; }
+    .empty-state {
+      text-align: center;
+      padding: 40px 18px;
+      color: var(--text-muted);
+      font-size: 14px;
+      animation: fadeIn .5s ease;
     }
-    to {
-      opacity: 1;
-      transform: translateX(0);
+    .empty-state .empty-icon { font-size: 42px; margin-bottom: 10px; opacity: .5; animation: float 3s ease-in-out infinite; }
+    .log-panel {
+      background: var(--log-bg);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 13px;
+      color: var(--log-text);
+      min-height: 60px;
+      max-height: 280px;
+      overflow-y: auto;
+      transition: all .3s ease;
+      scroll-behavior: smooth;
     }
-  }
-  .theme-btn {
-    padding: 8px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface2);
-    color: var(--text);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all .3s ease;
-  }
-  .theme-btn:hover {
-    background: var(--border);
-    transform: rotate(-5deg);
-  }
-  .view-toggle {
-    display: flex;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    transition: all .3s ease;
-  }
-  .view-btn {
-    padding: 7px 11px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 15px;
-    transition: all .3s ease;
-  }
-  .view-btn:hover {
-    background: rgba(0,102,255,.1);
-    color: var(--primary);
-  }
-  .view-btn.active {
-    background: var(--primary);
-    color: #fff;
-  }
-  .json-view {
-    background: var(--log-bg);
-    color: var(--log-text);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    font-family: 'SF Mono', Consolas, monospace;
-    font-size: 12px;
-    overflow-x: auto;
-    margin-top: 14px;
-    white-space: pre;
-    max-height: 320px;
-    overflow-y: auto;
-    transition: all .3s ease;
-    scroll-behavior: smooth;
-  }
-  .json-view::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .json-view::-webkit-scrollbar-track {
-    background: rgba(0,0,0,.2);
-    border-radius: 3px;
-  }
-  .json-view::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,.3);
-    border-radius: 3px;
-  }
-  .json-key {
-    color: #70c0ff;
-  }
-  .json-str {
-    color: #8ce99a;
-  }
-  .json-num {
-    color: #ffc078;
-  }
-  .json-bool {
-    color: #ffd43b;
-  }
-  .json-null {
-    color: #cc99ff;
-  }
-</style>
+    .log-panel::-webkit-scrollbar { width: 6px; }
+    .log-panel::-webkit-scrollbar-track { background: rgba(0,0,0,.2); border-radius: 3px; }
+    .log-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,.3); border-radius: 3px; }
+    .log-line {
+      padding: 3px 0;
+      line-height: 1.6;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: slideInLeft .3s ease;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .log-line:last-child { border-bottom: none; }
+    .log-time { color: #6c757d; font-size: 11px; flex-shrink: 0; margin-top: 2px; }
+    .log-type { font-size: 11px; flex-shrink: 0; margin-top: 2px; width: 36px; }
+    .log-msg { flex: 1; }
+    .log-detail { font-size: 11px; color: #6c757d; margin-top: 1px; }
+    .log-line.ok .log-msg { color: #32d74b; }
+    .log-line.err .log-msg { color: #ff453a; }
+    .log-line.info .log-msg { color: #2d88ff; }
+    .log-line.warn .log-msg { color: #ff9f0a; }
+    .log-line.ok .log-type { color: #32d74b; }
+    .log-line.err .log-type { color: #ff453a; }
+    .log-line.info .log-type { color: #2d88ff; }
+    .log-line.warn .log-type { color: #ff9f0a; }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 10px;
+    }
+    .cookie-extra { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .cookie-extra .input-group { min-width: 100px; }
+    .search-wrap { position: relative; flex: 1; min-width: 140px; }
+    .search-wrap input { padding-left: 34px; }
+    .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 15px;
+      pointer-events: none;
+    }
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--success);
+      display: inline-block;
+      margin-right: 5px;
+      animation: pulse 2s infinite;
+    }
+    .idb-browser {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      min-height: 200px;
+    }
+    .idb-panel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .idb-panel-header {
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .idb-panel-list { flex: 1; overflow-y: auto; padding: 6px; }
+    .idb-panel-list::-webkit-scrollbar { width: 4px; }
+    .idb-panel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .idb-tree-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      transition: all .2s ease;
+      border: 1.5px solid transparent;
+    }
+    .idb-tree-item:hover { background: var(--border); }
+    .idb-tree-item.selected {
+      background: rgba(0,102,255,.1);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .idb-tree-item .item-icon { font-size: 14px; flex-shrink: 0; }
+    .idb-tree-item .item-name {
+      flex: 1;
+      font-family: 'SF Mono', Consolas, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .idb-tree-item .item-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: var(--border);
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .idb-tree-item.selected .item-badge { background: var(--primary); color: #fff; }
+    .idb-db-panel { width: 210px; flex-shrink: 0; }
+    .idb-store-panel { flex: 1; }
+    .idb-path-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      font-size: 13px;
+      font-family: 'SF Mono', Consolas, monospace;
+      flex-wrap: wrap;
+    }
+    .idb-path-sep { color: var(--text-muted); user-select: none; }
+    .idb-path-seg {
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+    .idb-path-seg:hover { opacity: .7; background: rgba(0,102,255,.1); }
+    .idb-path-seg.root { color: var(--text-muted); font-weight: 400; }
+    .idb-store-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; transition: all .3s ease; }
+    .pill-cookie { background: rgba(255,149,0,.15); color: var(--tag-cookie); }
+    .pill-ls { background: rgba(0,102,255,.15); color: var(--tag-ls); }
+    .pill-idb { background: rgba(175,82,222,.15); color: var(--tag-idb); }
+    .overlay-base {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .overlay-base.show { display: flex; animation: fadeIn .3s ease; }
+    .dialog-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+      animation: scaleIn .3s ease;
+      width: 96%;
+    }
+    .confirm-box { max-width: 360px; padding: 26px; }
+    .confirm-box h4 { font-size: 17px; margin-bottom: 10px; font-weight: 700; }
+    .confirm-box p { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .edit-box { max-width: 520px; padding: 22px; }
+    .edit-box h4 { font-size: 16px; margin-bottom: 16px; font-weight: 700; }
+    .edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .rename-box { max-width: 400px; padding: 22px; }
+    .rename-box h4 { font-size: 16px; margin-bottom: 16px; font-weight: 700; }
+    .rename-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .settings-box {
+      max-width: 560px;
+      padding: 24px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .settings-box::-webkit-scrollbar { width: 6px; }
+    .settings-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .settings-box h4 { font-size: 17px; margin-bottom: 18px; font-weight: 700; }
+    .settings-group { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .settings-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .settings-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 12px;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .settings-row:last-child { margin-bottom: 0; }
+    .settings-label { font-size: 14px; font-weight: 500; }
+    .settings-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .toggle {
+      width: 44px;
+      height: 26px;
+      background: var(--border);
+      border-radius: 13px;
+      cursor: pointer;
+      position: relative;
+      transition: background .3s ease;
+      flex-shrink: 0;
+      border: none;
+    }
+    .toggle.on { background: var(--primary); }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform .3s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle.on::after { transform: translateX(18px); }
+    .pass-timer-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .pass-timer-row input[type="number"] { width: 80px; flex: none; }
+    .timer-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--danger);
+      color: #fff;
+      display: none;
+      animation: fadeIn .3s ease;
+    }
+    .lock-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      flex-direction: column;
+      gap: 16px;
+    }
+    .lock-overlay.show { display: flex; animation: fadeIn .3s ease; }
+    .lock-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 340px;
+      width: 90%;
+      box-shadow: var(--shadow-lg);
+      animation: scaleIn .3s ease;
+      text-align: center;
+    }
+    .lock-icon { font-size: 48px; margin-bottom: 14px; }
+    .lock-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .lock-box p { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
+    .lock-actions { display: flex; gap: 10px; justify-content: center; }
+    .info-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .info-overlay.show { display: flex; animation: fadeIn .3s ease; }
+    .info-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 480px;
+      width: 96%;
+      box-shadow: var(--shadow-lg);
+      animation: scaleIn .3s ease;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .info-box h4 { font-size: 17px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .info-section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .info-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .info-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 13px; gap: 12px; }
+    .info-row .info-key { color: var(--text-muted); }
+    .info-row .info-val { font-weight: 600; font-family: 'SF Mono', Consolas, monospace; color: var(--primary); }
+    .info-bar-wrap { margin-top: 6px; }
+    .info-bar-bg { background: var(--border); border-radius: 4px; height: 8px; overflow: hidden; }
+    .info-bar-fill { height: 100%; border-radius: 4px; background: var(--primary); transition: width .5s ease; }
+    .info-bar-fill.warn { background: var(--warning); }
+    .info-bar-fill.danger { background: var(--danger); }
+    @media (max-width: 600px) {
+      .header-title { font-size: 16px; }
+      .tab-btn { font-size: 13px; padding: 11px 6px; min-width: 120px; }
+      .tab-icon { font-size: 15px; }
+      th, td { padding: 9px 10px; }
+      .td-key { max-width: 120px; }
+      .td-val { max-width: 140px; }
+      main { padding: 16px 12px; }
+      .idb-browser { flex-direction: column; }
+      .idb-db-panel { width: 100%; }
+    }
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 200;
+    }
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideInRight .35s ease;
+      max-width: 300px;
+    }
+    .theme-btn {
+      padding: 8px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .3s ease;
+    }
+    .theme-btn:hover { background: var(--border); }
+    .view-toggle { display: flex; border: 1.5px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .view-btn {
+      padding: 7px 11px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 15px;
+      transition: all .3s ease;
+    }
+    .view-btn:hover { background: rgba(0,102,255,.1); color: var(--primary); }
+    .view-btn.active { background: var(--primary); color: #fff; }
+    .json-view {
+      background: var(--log-bg);
+      color: var(--log-text);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      overflow-y: auto;
+      margin-top: 14px;
+      white-space: pre;
+      max-height: 340px;
+      scroll-behavior: smooth;
+    }
+    .json-view::-webkit-scrollbar { width: 6px; height: 6px; }
+    .json-view::-webkit-scrollbar-track { background: rgba(0,0,0,.2); border-radius: 3px; }
+    .json-view::-webkit-scrollbar-thumb { background: rgba(255,255,255,.3); border-radius: 3px; }
+    .json-key { color: #70c0ff; }
+    .json-str { color: #8ce99a; }
+    .json-num { color: #ffc078; }
+    .json-bool { color: #ffd43b; }
+    .json-null { color: #cc99ff; }
+    .table-toolbar { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .table-toolbar .section-title { margin: 0; flex: 1; }
+    .color-picker-row { display: flex; align-items: center; gap: 10px; }
+    .color-picker-row input[type="color"] { width: 40px; height: 32px; padding: 2px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; background: var(--surface2); }
+    .font-size-row { display: flex; align-items: center; gap: 8px; width: 160px; }
+    .font-size-row input[type="range"] { flex: 1; }
+    .font-size-label { font-size: 13px; color: var(--text-muted); width: 32px; text-align: right; }
+    .sys-keys-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .sys-key-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); font-size: 13px; }
+    .sys-key-item input[type="checkbox"] { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--primary); }
+    .sys-key-item .skey-name { font-family: 'SF Mono', Consolas, monospace; font-weight: 600; color: var(--primary); flex: 1; }
+    .sys-key-item .skey-val { font-family: 'SF Mono', Consolas, monospace; font-size: 11px; color: var(--text-muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
 </head>
 <body>
   <header>
@@ -906,6 +732,8 @@
       </div>
       <div class="header-actions">
         <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+        <button class="btn btn-ghost btn-sm" onclick="openInfo()">ℹ️ Info</button>
+        <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙️ Settings</button>
         <button class="btn btn-ghost btn-sm" onclick="exportAll()">⬆️ Export</button>
         <button class="btn btn-ghost btn-sm" onclick="triggerImport()">⬇️ Import</button>
         <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAll(event)">
@@ -931,6 +759,7 @@
           <span class="badge idb" id="badge-idb">0</span>
         </button>
       </div>
+      <!-- LocalStorage -->
       <div class="tab-panel active" id="panel-ls">
         <div class="card-body">
           <div class="section-title">Set / Get Item</div>
@@ -947,16 +776,19 @@
           <div class="action-row">
             <button class="btn btn-primary" onclick="lsSet()">✏️ Set</button>
             <button class="btn btn-ghost" onclick="lsGet()">🔍 Get</button>
-            <button class="btn btn-danger" onclick="lsRemove()">🗑️ Remove</button>
+            <button class="btn btn-danger" onclick="lsRemoveChecked()">🗑️ Remove</button>
             <button class="btn btn-ghost" onclick="lsClear()">🧹 Clear All</button>
             <button class="btn btn-ghost" onclick="lsRefresh()">🔄 Refresh</button>
           </div>
-          <div class="card-header" style="margin-top:16px; padding:12px 0 8px 0; border:none; border-top:1px solid var(--border);">
-            <div class="section-title" style="margin:0;flex:1">Stored Items</div>
+          <div class="table-toolbar">
+            <div class="section-title">Stored Items</div>
             <div class="view-toggle">
               <button class="view-btn active" id="ls-view-table" onclick="setView('ls','table')" title="Table">⊞</button>
               <button class="view-btn" id="ls-view-json" onclick="setView('ls','json')" title="JSON">{ }</button>
             </div>
+            <button class="btn btn-ghost btn-sm" onclick="lsExportSelected()">⬆️ Export</button>
+            <button class="btn btn-ghost btn-sm" onclick="lsTriggerImport()">⬇️ Import</button>
+            <input type="file" id="lsImportFile" accept=".json" style="display:none" onchange="lsImport(event)">
             <div class="search-wrap" style="max-width:200px;">
               <span class="search-icon">🔍</span>
               <input type="text" placeholder="Search..." oninput="lsRefresh()" id="ls-search">
@@ -967,6 +799,7 @@
               <table>
                 <thead>
                   <tr>
+                    <th><input type="checkbox" id="ls-check-all" onchange="toggleCheckAll('ls')"></th>
                     <th>Key</th>
                     <th>Value</th>
                     <th>Size</th>
@@ -982,6 +815,7 @@
           </div>
         </div>
       </div>
+      <!-- Cookies -->
       <div class="tab-panel" id="panel-cookie">
         <div class="card-body">
           <div class="section-title">Set Cookie</div>
@@ -1016,16 +850,19 @@
           <div class="action-row">
             <button class="btn btn-primary" onclick="ckSet()">✏️ Set</button>
             <button class="btn btn-ghost" onclick="ckGet()">🔍 Get</button>
-            <button class="btn btn-danger" onclick="ckRemove()">🗑️ Remove</button>
+            <button class="btn btn-danger" onclick="ckRemoveChecked()">🗑️ Remove</button>
             <button class="btn btn-danger" onclick="ckClearAll()">🧹 Clear All</button>
             <button class="btn btn-ghost" onclick="ckRefresh()">🔄 Refresh</button>
           </div>
-          <div class="card-header" style="margin-top:16px; padding:12px 0 8px 0; border:none; border-top:1px solid var(--border);">
-            <div class="section-title" style="margin:0;flex:1">Cookies</div>
+          <div class="table-toolbar">
+            <div class="section-title">Cookies</div>
             <div class="view-toggle">
               <button class="view-btn active" id="cookie-view-table" onclick="setView('cookie','table')" title="Table">⊞</button>
               <button class="view-btn" id="cookie-view-json" onclick="setView('cookie','json')" title="JSON">{ }</button>
             </div>
+            <button class="btn btn-ghost btn-sm" onclick="ckExportSelected()">⬆️ Export</button>
+            <button class="btn btn-ghost btn-sm" onclick="ckTriggerImport()">⬇️ Import</button>
+            <input type="file" id="ckImportFile" accept=".json" style="display:none" onchange="ckImport(event)">
             <div class="search-wrap" style="max-width:200px;">
               <span class="search-icon">🔍</span>
               <input type="text" placeholder="Search..." oninput="ckRefresh()" id="ck-search">
@@ -1036,6 +873,7 @@
               <table>
                 <thead>
                   <tr>
+                    <th><input type="checkbox" id="ck-check-all" onchange="toggleCheckAll('cookie')"></th>
                     <th>Name</th>
                     <th>Value</th>
                     <th>Actions</th>
@@ -1050,24 +888,39 @@
           </div>
         </div>
       </div>
+      <!-- IndexedDB -->
       <div class="tab-panel" id="panel-idb">
         <div class="card-body">
-          <div class="section-title">Available Databases</div>
-          <div id="idb-db-list" class="idb-db-list"></div>
-          <div class="section-title">Selected Store</div>
-          <div class="idb-store-row">
-            <div class="input-group" style="max-width:180px;">
-              <label>Database</label>
-              <input type="text" id="idb-db-name" value="myDatabase" placeholder="database name">
-            </div>
-            <div class="input-group" style="max-width:180px;">
-              <label>Store</label>
-              <input type="text" id="idb-store" value="myStore" placeholder="store name">
-            </div>
-            <button class="btn btn-ghost" style="margin-top:20px;" onclick="idbOpenStore()">📂 Open</button>
-            <div style="margin-top:20px; font-size:13px; color:var(--text-muted);" id="idb-status">Not connected</div>
+          <div class="section-title">Database Browser</div>
+          <div class="idb-path-bar" id="idb-path-bar">
+            <span class="idb-path-seg root" onclick="idbPathRoot()">🗄️ /</span>
           </div>
-          <div class="section-title" style="margin-top:6px;">Set Item</div>
+          <div class="idb-browser">
+            <div class="idb-panel idb-db-panel">
+              <div class="idb-panel-header">
+                🗄️ Databases
+                <button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:2px 8px;font-size:11px;" onclick="idbListDatabases()">↻</button>
+              </div>
+              <div class="idb-panel-list" id="idb-db-panel-list">
+                <div style="padding:10px;color:var(--text-muted);font-size:12px;">Loading...</div>
+              </div>
+            </div>
+            <div class="idb-panel idb-store-panel">
+              <div class="idb-panel-header">
+                📦 Stores
+                <span id="idb-store-panel-hint" style="margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">← select a database</span>
+              </div>
+              <div class="idb-panel-list" id="idb-store-panel-list">
+                <div style="padding:10px;color:var(--text-muted);font-size:12px;">No database selected</div>
+              </div>
+            </div>
+          </div>
+          <div class="idb-store-row">
+            <div style="font-size:13px;color:var(--text-muted);">Active:</div>
+            <div id="idb-status" style="font-size:13px;color:var(--text-muted);">Not connected</div>
+            <button class="btn btn-ghost btn-sm" onclick="idbDisconnect()">✖ Disconnect</button>
+          </div>
+          <div class="section-title">Set Item</div>
           <div class="input-row">
             <div class="input-group">
               <label>Key</label>
@@ -1081,16 +934,19 @@
           <div class="action-row">
             <button class="btn btn-primary" onclick="idbSet()">✏️ Set</button>
             <button class="btn btn-ghost" onclick="idbGet()">🔍 Get</button>
-            <button class="btn btn-danger" onclick="idbRemove()">🗑️ Remove</button>
+            <button class="btn btn-danger" onclick="idbRemoveChecked()">🗑️ Remove</button>
             <button class="btn btn-danger" onclick="idbClear()">🧹 Clear Store</button>
             <button class="btn btn-ghost" onclick="idbRefresh()">🔄 Refresh</button>
           </div>
-          <div class="card-header" style="margin-top:16px; padding:12px 0 8px 0; border:none; border-top:1px solid var(--border);">
-            <div class="section-title" style="margin:0;flex:1">Items in Store</div>
+          <div class="table-toolbar">
+            <div class="section-title">Items in Store</div>
             <div class="view-toggle">
               <button class="view-btn active" id="idb-view-table" onclick="setView('idb','table')" title="Table">⊞</button>
               <button class="view-btn" id="idb-view-json" onclick="setView('idb','json')" title="JSON">{ }</button>
             </div>
+            <button class="btn btn-ghost btn-sm" onclick="idbExportSelected()">⬆️ Export</button>
+            <button class="btn btn-ghost btn-sm" onclick="idbTriggerImport()">⬇️ Import</button>
+            <input type="file" id="idbImportFile" accept=".json" style="display:none" onchange="idbImport(event)">
             <div class="search-wrap" style="max-width:200px;">
               <span class="search-icon">🔍</span>
               <input type="text" placeholder="Search..." oninput="idbRefresh()" id="idb-search">
@@ -1101,9 +957,11 @@
               <table>
                 <thead>
                   <tr>
+                    <th><input type="checkbox" id="idb-check-all" onchange="toggleCheckAll('idb')"></th>
                     <th>Key</th>
                     <th>Value</th>
                     <th>Type</th>
+                    <th>Size</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -1117,18 +975,22 @@
         </div>
       </div>
     </div>
+    <!-- Log -->
     <div class="card">
       <div class="card-header">
         <h3>📋 Activity Log</h3>
+        <span id="log-count" style="font-size:12px;color:var(--text-muted);">0 entries</span>
         <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportLog()">⬆️ Export Log</button>
       </div>
       <div class="card-body" style="padding:12px;">
         <div class="log-panel" id="log-panel"></div>
       </div>
     </div>
   </main>
-  <div class="confirm-overlay" id="confirmOverlay">
-    <div class="confirm-box">
+  <!-- Confirm -->
+  <div class="overlay-base" id="confirmOverlay">
+    <div class="dialog-box confirm-box">
       <h4 id="confirmTitle">Confirm</h4>
       <p id="confirmMsg">Are you sure?</p>
       <div class="confirm-actions">
@@ -1137,8 +999,9 @@
       </div>
     </div>
   </div>
-  <div class="edit-overlay" id="editOverlay">
-    <div class="edit-box">
+  <!-- Edit -->
+  <div class="overlay-base" id="editOverlay">
+    <div class="dialog-box edit-box">
       <h4 id="editTitle">Edit Value</h4>
       <div class="input-group" style="margin-bottom:12px;">
         <label>Key</label>
@@ -1154,28 +1017,487 @@
       </div>
     </div>
   </div>
+  <!-- Rename -->
+  <div class="overlay-base" id="renameOverlay">
+    <div class="dialog-box rename-box">
+      <h4 id="renameTitle">Rename Key</h4>
+      <div class="input-group" style="margin-bottom:12px;">
+        <label>Old Key / Name</label>
+        <input type="text" id="renameOldKey" readonly style="opacity:.6;">
+      </div>
+      <div class="input-group">
+        <label>New Key / Name</label>
+        <input type="text" id="renameNewKey" placeholder="Enter new name">
+      </div>
+      <div class="rename-actions">
+        <button class="btn btn-ghost" onclick="renameResolve(false)">Cancel</button>
+        <button class="btn btn-primary" onclick="renameResolve(true)">✅ Rename</button>
+      </div>
+    </div>
+  </div>
+  <!-- Settings -->
+  <div class="overlay-base" id="settingsOverlay">
+    <div class="dialog-box settings-box">
+      <h4>⚙️ Settings</h4>
+      <div class="settings-group">
+        <div class="settings-group-title">Appearance</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Dark Theme</div><div class="settings-desc">Switch between light and dark mode</div></div>
+          <button class="toggle" id="toggleThemeBtn" onclick="settingsToggleTheme()"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Compact Table</div><div class="settings-desc">Reduce row padding in tables</div></div>
+          <button class="toggle" id="toggleCompact" onclick="settingsToggle('compact')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Wrap Long Values</div><div class="settings-desc">Show full value instead of ellipsis</div></div>
+          <button class="toggle" id="toggleWrap" onclick="settingsToggle('wrap')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Sticky Header</div><div class="settings-desc">Keep header visible while scrolling</div></div>
+          <button class="toggle" id="toggleStickyHeader" onclick="settingsToggle('stickyHeader')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Animate Rows</div><div class="settings-desc">Fade in table rows on load</div></div>
+          <button class="toggle" id="toggleAnimateRows" onclick="settingsToggle('animateRows')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Accent Color</div><div class="settings-desc">Change primary UI color</div></div>
+          <div class="color-picker-row">
+            <input type="color" id="accentColor" value="#0066ff" oninput="applyAccent(this.value)" onchange="saveSettings()">
+            <button class="btn btn-ghost btn-sm" onclick="resetAccent()">Reset</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Font Size</div><div class="settings-desc">Table and UI font size</div></div>
+          <div class="font-size-row">
+            <input type="range" id="fontSize" min="11" max="18" value="14" oninput="applyFontSize(this.value)" onchange="saveSettings()">
+            <span class="font-size-label" id="fontSizeLabel">14px</span>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">Security</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Auto-lock</div><div class="settings-desc">Lock the app after inactivity</div></div>
+          <button class="toggle" id="toggleLock" onclick="settingsToggle('lock')"></button>
+        </div>
+        <div class="pass-timer-row" id="lockTimerRow" style="display:none;">
+          <label style="font-size:13px;color:var(--text-muted);">Timeout (seconds):</label>
+          <input type="number" id="lockTimeout" value="60" min="10" max="3600" style="width:90px;" oninput="saveLockSettings()">
+          <span id="timerBadge" class="timer-badge"></span>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">Log</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Detailed Log</div><div class="settings-desc">Show extra details in activity log</div></div>
+          <button class="toggle" id="toggleDetailedLog" onclick="settingsToggle('detailedLog')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Log Timestamps (ms)</div><div class="settings-desc">Show milliseconds in log</div></div>
+          <button class="toggle" id="toggleLogMs" onclick="settingsToggle('logMs')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Max Log Entries</div></div>
+          <input type="number" id="maxLogEntries" value="100" min="10" max="1000" style="width:90px;" oninput="saveMaxLog()">
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">Data</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Confirm Before Delete</div><div class="settings-desc">Show confirmation dialog on delete</div></div>
+          <button class="toggle" id="toggleConfirm" onclick="settingsToggle('confirmDelete')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Auto Refresh</div><div class="settings-desc">Refresh data every 5 seconds</div></div>
+          <button class="toggle" id="toggleAutoRefresh" onclick="settingsToggle('autoRefresh')"></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Show Empty IDB Stores</div><div class="settings-desc">Show stores with 0 items in browser</div></div>
+          <button class="toggle" id="toggleShowEmpty" onclick="settingsToggle('showEmpty')"></button>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">Show System Keys in LocalStorage</div>
+        <div class="settings-desc" style="margin-bottom:10px;">Check keys you want to show in the table (hidden by default)</div>
+        <div class="sys-keys-list" id="sysKeysList"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;gap:8px;">
+        <button class="btn btn-danger btn-sm" onclick="resetAllSettings()">Reset All</button>
+        <button class="btn btn-primary" onclick="closeSettings()">Done</button>
+      </div>
+    </div>
+  </div>
+  <!-- Info -->
+  <div class="info-overlay" id="infoOverlay">
+    <div class="info-box">
+      <h4>ℹ️ Storage Information</h4>
+      <div id="info-content"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-primary" onclick="closeInfo()">Close</button>
+      </div>
+    </div>
+  </div>
+  <!-- Lock -->
+  <div class="lock-overlay" id="lockOverlay">
+    <div class="lock-box">
+      <div class="lock-icon">🔒</div>
+      <h3>App Locked</h3>
+      <p>The app was locked due to inactivity</p>
+      <div class="lock-actions">
+        <button class="btn btn-primary" onclick="unlock()">🔓 Unlock</button>
+      </div>
+    </div>
+  </div>
   <div class="toast-container" id="toastContainer"></div>
   <script>
     var idbDb = null;
-    var idbDbName = 'myDatabase';
-    var idbStoreName = 'myStore';
+    var idbDbName = '';
+    var idbStoreName = '';
     var currentTab = 'ls';
     var viewModes = { ls: 'table', cookie: 'table', idb: 'table' };
     var confirmCb = null;
     var editCb = null;
+    var renameCb = null;
+    var logEntries = [];
+    var lockCountdown = null;
+    var lockSecondsLeft = 0;
+    var autoRefreshTimer = null;
+    var selectedDbName = '';
+    var settings = {
+      compact: false,
+      wrap: false,
+      lock: false,
+      lockTimeout: 60,
+      detailedLog: true,
+      logMs: true,
+      confirmDelete: true,
+      autoRefresh: false,
+      showEmpty: true,
+      accentColor: '#0066ff',
+      fontSize: 14,
+      stickyHeader: true,
+      animateRows: true,
+      maxLogEntries: 100,
+      visibleSysKeys: {}
+    };
+    var LS_SYS_KEYS = {
+      'sm-tab': 1,
+      'sm-views': 1,
+      'sm-settings': 1,
+      'sm-theme': 1
+    };
+    var LS_ALWAYS_SKIP = {
+      'Pass-timer': 1,
+      'setItem': 1,
+      'getItem': 1,
+      'removeItem': 1,
+      'clear': 1,
+      'key': 1,
+      'length': 1
+    };
     (function init() {
       var theme = localStorage.getItem('sm-theme') || 'light';
       applyTheme(theme);
       var tab = localStorage.getItem('sm-tab') || 'ls';
-      switchTab(tab);
       var vmRaw = localStorage.getItem('sm-views');
       if (vmRaw) {
         try { viewModes = JSON.parse(vmRaw); } catch(e) {}
       }
+      loadSettings();
+      switchTab(tab);
       idbListDatabases();
       lsRefresh();
       ckRefresh();
+      setupLockEvents();
     })();
+    function isSkipped(k) {
+      if (LS_ALWAYS_SKIP[k]) return true;
+      if (LS_SYS_KEYS[k]) {
+        return !settings.visibleSysKeys[k];
+      }
+      return false;
+    }
+    function lsAllKeys() {
+      var result = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k !== null && !isSkipped(k)) result.push(k);
+      }
+      return result;
+    }
+    function loadSettings() {
+      var raw = localStorage.getItem('sm-settings');
+      if (raw) {
+        try { settings = Object.assign(settings, JSON.parse(raw)); } catch(e) {}
+      }
+      if (!settings.visibleSysKeys) settings.visibleSysKeys = {};
+      applySettingsAll();
+      syncSettingsUI();
+    }
+    function saveSettings() {
+      localStorage.setItem('sm-settings', JSON.stringify(settings));
+    }
+    function applySettingsAll() {
+      applyAccent(settings.accentColor || '#0066ff');
+      applyFontSize(settings.fontSize || 14);
+      var hdr = document.querySelector('header');
+      if (hdr) hdr.style.position = settings.stickyHeader ? 'sticky' : 'relative';
+      if (settings.lock) resetLockTimer(); else clearLockTimers();
+      if (settings.autoRefresh) startAutoRefresh(); else stopAutoRefresh();
+    }
+    function applyAccent(color) {
+      settings.accentColor = color;
+      document.documentElement.style.setProperty('--primary', color);
+      document.documentElement.style.setProperty('--primary-hover', shadeColor(color, -20));
+      var el = document.getElementById('accentColor');
+      if (el) el.value = color;
+    }
+    function shadeColor(color, percent) {
+      var num = parseInt(color.replace('#',''), 16);
+      var amt = Math.round(2.55 * percent);
+      var R = Math.min(255, Math.max(0, (num >> 16) + amt));
+      var G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+      var B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+      return '#' + ((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1);
+    }
+    function resetAccent() {
+      applyAccent('#0066ff');
+      saveSettings();
+    }
+    function applyFontSize(size) {
+      settings.fontSize = parseInt(size);
+      var label = document.getElementById('fontSizeLabel');
+      if (label) label.textContent = size + 'px';
+      var slider = document.getElementById('fontSize');
+      if (slider) slider.value = size;
+      document.querySelectorAll('table').forEach(function(t) { t.style.fontSize = size + 'px'; });
+    }
+    function startAutoRefresh() {
+      stopAutoRefresh();
+      autoRefreshTimer = setInterval(function() {
+        if (currentTab === 'ls') lsRefresh();
+        if (currentTab === 'cookie') ckRefresh();
+        if (currentTab === 'idb') idbRefresh();
+      }, 5000);
+    }
+    function stopAutoRefresh() {
+      if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+    }
+    function resetAllSettings() {
+      settings = {
+        compact: false, wrap: false, lock: false, lockTimeout: 60,
+        detailedLog: true, logMs: true, confirmDelete: true,
+        autoRefresh: false, showEmpty: true, accentColor: '#0066ff',
+        fontSize: 14, stickyHeader: true, animateRows: true,
+        maxLogEntries: 100, visibleSysKeys: {}
+      };
+      saveSettings();
+      applySettingsAll();
+      syncSettingsUI();
+      lsRefresh();
+      toast('Settings reset', '🔄');
+    }
+    function renderSysKeysList() {
+      var container = document.getElementById('sysKeysList');
+      if (!container) return;
+      container.innerHTML = '';
+      Object.keys(LS_SYS_KEYS).forEach(function(k) {
+        var val = localStorage.getItem(k);
+        var item = document.createElement('div');
+        item.className = 'sys-key-item';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!settings.visibleSysKeys[k];
+        cb.onchange = function() {
+          if (cb.checked) {
+            settings.visibleSysKeys[k] = 1;
+          } else {
+            delete settings.visibleSysKeys[k];
+          }
+          saveSettings();
+          lsRefresh();
+        };
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'skey-name';
+        nameSpan.textContent = k;
+        var valSpan = document.createElement('span');
+        valSpan.className = 'skey-val';
+        valSpan.textContent = val !== null ? val : '(not set)';
+        item.appendChild(cb);
+        item.appendChild(nameSpan);
+        item.appendChild(valSpan);
+        container.appendChild(item);
+      });
+    }
+    function syncSettingsUI() {
+      setToggle('toggleThemeBtn', document.documentElement.getAttribute('data-theme') === 'dark');
+      setToggle('toggleCompact', settings.compact);
+      setToggle('toggleWrap', settings.wrap);
+      setToggle('toggleLock', settings.lock);
+      setToggle('toggleDetailedLog', settings.detailedLog);
+      setToggle('toggleLogMs', settings.logMs);
+      setToggle('toggleConfirm', settings.confirmDelete);
+      setToggle('toggleAutoRefresh', settings.autoRefresh);
+      setToggle('toggleShowEmpty', settings.showEmpty);
+      setToggle('toggleStickyHeader', settings.stickyHeader);
+      setToggle('toggleAnimateRows', settings.animateRows);
+      var lt = document.getElementById('lockTimeout');
+      if (lt) lt.value = settings.lockTimeout;
+      var ml = document.getElementById('maxLogEntries');
+      if (ml) ml.value = settings.maxLogEntries || 100;
+      document.getElementById('lockTimerRow').style.display = settings.lock ? 'flex' : 'none';
+      applyAccent(settings.accentColor || '#0066ff');
+      applyFontSize(settings.fontSize || 14);
+      renderSysKeysList();
+    }
+    function setToggle(id, on) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('on', !!on);
+    }
+    function settingsToggle(key) {
+      settings[key] = !settings[key];
+      saveSettings();
+      syncSettingsUI();
+      applySettingsAll();
+      lsRefresh();
+      ckRefresh();
+      idbRefresh();
+    }
+    function settingsToggleTheme() {
+      toggleTheme();
+      setToggle('toggleThemeBtn', document.documentElement.getAttribute('data-theme') === 'dark');
+    }
+    function saveLockSettings() {
+      settings.lockTimeout = parseInt(document.getElementById('lockTimeout').value) || 60;
+      saveSettings();
+      if (settings.lock) resetLockTimer();
+    }
+    function saveMaxLog() {
+      settings.maxLogEntries = parseInt(document.getElementById('maxLogEntries').value) || 100;
+      saveSettings();
+    }
+    function openSettings() {
+      syncSettingsUI();
+      document.getElementById('settingsOverlay').classList.add('show');
+    }
+    function closeSettings() {
+      document.getElementById('settingsOverlay').classList.remove('show');
+    }
+    function openInfo() {
+      var content = document.getElementById('info-content');
+      content.innerHTML = '';
+      var lsKeys = lsAllKeys();
+      var lsSize = 0;
+      lsKeys.forEach(function(k) { lsSize += new Blob([k + (localStorage.getItem(k) || '')]).size; });
+      var lsMax = 5 * 1024 * 1024;
+      var lsPct = Math.min(100, Math.round(lsSize / lsMax * 100));
+      var cookies = parseCookies();
+      var ckCount = Object.keys(cookies).length;
+      var ckSize = 0;
+      Object.keys(cookies).forEach(function(k) { ckSize += new Blob([k + '=' + cookies[k]]).size; });
+      var idbConnected = !!idbDb;
+      function makeSection(title) {
+        var s = document.createElement('div');
+        s.className = 'info-section';
+        var t = document.createElement('div');
+        t.className = 'info-section-title';
+        t.textContent = title;
+        s.appendChild(t);
+        return s;
+      }
+      function makeRow(key, val) {
+        var r = document.createElement('div');
+        r.className = 'info-row';
+        var k = document.createElement('span');
+        k.className = 'info-key';
+        k.textContent = key;
+        var v = document.createElement('span');
+        v.className = 'info-val';
+        v.textContent = val;
+        r.appendChild(k);
+        r.appendChild(v);
+        return r;
+      }
+      function makeBar(pct) {
+        var w = document.createElement('div');
+        w.className = 'info-bar-wrap';
+        var bg = document.createElement('div');
+        bg.className = 'info-bar-bg';
+        var fill = document.createElement('div');
+        fill.className = 'info-bar-fill' + (pct > 90 ? ' danger' : pct > 70 ? ' warn' : '');
+        fill.style.width = pct + '%';
+        bg.appendChild(fill);
+        w.appendChild(bg);
+        return w;
+      }
+      var lsSec = makeSection('💾 LocalStorage');
+      lsSec.appendChild(makeRow('Items', lsKeys.length));
+      lsSec.appendChild(makeRow('Used', byteSize(lsSize) + ' / ~5 MB (' + lsPct + '%)'));
+      lsSec.appendChild(makeBar(lsPct));
+      content.appendChild(lsSec);
+      var ckSec = makeSection('🍪 Cookies');
+      ckSec.appendChild(makeRow('Count', ckCount));
+      ckSec.appendChild(makeRow('Size', byteSize(ckSize)));
+      ckSec.appendChild(makeRow('Max per domain', '~4 KB per cookie'));
+      content.appendChild(ckSec);
+      var idbSec = makeSection('🗃️ IndexedDB');
+      idbSec.appendChild(makeRow('Connected', idbConnected ? '✅ Yes' : '❌ No'));
+      if (idbConnected) {
+        idbSec.appendChild(makeRow('Database', idbDbName));
+        idbSec.appendChild(makeRow('Store', idbStoreName));
+        idbSec.appendChild(makeRow('Version', String(idbDb.version)));
+        idbSec.appendChild(makeRow('Stores', Array.from(idbDb.objectStoreNames).join(', ')));
+      }
+      content.appendChild(idbSec);
+      var envSec = makeSection('🌐 Environment');
+      envSec.appendChild(makeRow('Browser', navigator.userAgent.split(' ').slice(-2).join(' ')));
+      envSec.appendChild(makeRow('Language', navigator.language));
+      envSec.appendChild(makeRow('Online', navigator.onLine ? '✅ Yes' : '❌ No'));
+      envSec.appendChild(makeRow('Cookies Enabled', navigator.cookieEnabled ? '✅ Yes' : '❌ No'));
+      envSec.appendChild(makeRow('IDB Supported', typeof indexedDB !== 'undefined' ? '✅ Yes' : '❌ No'));
+      content.appendChild(envSec);
+      document.getElementById('infoOverlay').classList.add('show');
+    }
+    function closeInfo() {
+      document.getElementById('infoOverlay').classList.remove('show');
+    }
+    function setupLockEvents() {
+      ['mousemove','keydown','click','scroll','touchstart'].forEach(function(ev) {
+        document.addEventListener(ev, function() {
+          if (settings.lock) resetLockTimer();
+        }, { passive: true });
+      });
+    }
+    function resetLockTimer() {
+      clearLockTimers();
+      lockSecondsLeft = settings.lockTimeout;
+      var badge = document.getElementById('timerBadge');
+      if (badge && settings.lock) {
+        badge.style.display = 'inline-flex';
+        badge.textContent = lockSecondsLeft + 's';
+      }
+      lockCountdown = setInterval(function() {
+        lockSecondsLeft--;
+        if (badge) badge.textContent = lockSecondsLeft + 's';
+        if (lockSecondsLeft <= 0) { clearLockTimers(); lock(); }
+      }, 1000);
+    }
+    function clearLockTimers() {
+      if (lockCountdown) { clearInterval(lockCountdown); lockCountdown = null; }
+      var badge = document.getElementById('timerBadge');
+      if (badge) badge.style.display = 'none';
+    }
+    function lock() {
+      document.getElementById('lockOverlay').classList.add('show');
+      log('App locked due to inactivity', 'warn');
+    }
+    function unlock() {
+      document.getElementById('lockOverlay').classList.remove('show');
+      if (settings.lock) resetLockTimer();
+      log('App unlocked', 'ok');
+    }
     function toggleTheme() {
       var cur = document.documentElement.getAttribute('data-theme') || 'light';
       applyTheme(cur === 'dark' ? 'light' : 'dark');
@@ -1219,20 +1541,42 @@
         if (el) el.style.display = m === mode ? 'block' : 'none';
       });
     }
-    function log(msg, type) {
+    function log(msg, type, detail) {
       var panel = document.getElementById('log-panel');
       var type_ = type || 'info';
       var now = new Date();
       var ts = now.toTimeString().slice(0,8);
+      var ms = String(now.getMilliseconds()).padStart(3,'0');
+      var entry = { ts: ts, ms: ms, msg: msg, type: type_, detail: detail || '', tab: currentTab };
+      logEntries.unshift(entry);
+      var maxLog = settings.maxLogEntries || 100;
+      if (logEntries.length > maxLog) logEntries = logEntries.slice(0, maxLog);
+      var icons = { ok: '✅', err: '❌', info: 'ℹ️', warn: '⚠️' };
       var line = document.createElement('div');
       line.className = 'log-line ' + type_;
-      var icons = { ok: '✅', err: '❌', info: 'ℹ️', warn: '⚠️' };
-      line.innerHTML = '<span class="log-time">' + ts + '</span><span class="log-msg">' + (icons[type_] || '') + ' ' + escHtml(msg) + '</span>';
+      var timeStr = settings.logMs ? ts + '.' + ms : ts;
+      var inner = '<span class="log-time">' + timeStr + '</span>';
+      inner += '<span class="log-type">[' + currentTab.toUpperCase() + ']</span>';
+      inner += '<div><div class="log-msg">' + (icons[type_] || '') + ' ' + escHtml(msg) + '</div>';
+      if (settings.detailedLog && detail) {
+        inner += '<div class="log-detail">→ ' + escHtml(detail) + '</div>';
+      }
+      inner += '</div>';
+      line.innerHTML = inner;
       panel.insertBefore(line, panel.firstChild);
-      while (panel.children.length > 60) panel.removeChild(panel.lastChild);
+      while (panel.children.length > maxLog) panel.removeChild(panel.lastChild);
+      var countEl = document.getElementById('log-count');
+      if (countEl) countEl.textContent = logEntries.length + ' entries';
     }
     function clearLog() {
       document.getElementById('log-panel').innerHTML = '';
+      logEntries = [];
+      var countEl = document.getElementById('log-count');
+      if (countEl) countEl.textContent = '0 entries';
+    }
+    function exportLog() {
+      downloadJson(logEntries, 'storage-log-' + Date.now() + '.json');
+      toast('Log exported', '📋');
     }
     function escHtml(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
@@ -1243,9 +1587,21 @@
       el.className = 'toast';
       el.innerHTML = (icon || '📌') + ' ' + escHtml(msg);
       c.appendChild(el);
-      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
+      setTimeout(function() {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(40px)';
+        el.style.transition = 'all .3s ease';
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+      }, 2800);
+    }
+    function byteSize(s) {
+      var b = typeof s === 'number' ? s : new Blob([String(s)]).size;
+      if (b < 1024) return b + ' B';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      return (b / 1024 / 1024).toFixed(2) + ' MB';
     }
     function confirmDialog(title, msg) {
+      if (!settings.confirmDelete) return Promise.resolve(true);
       return new Promise(function(resolve) {
         document.getElementById('confirmTitle').textContent = title;
         document.getElementById('confirmMsg').textContent = msg;
@@ -1273,94 +1629,115 @@
         editCb = null;
       }
     }
+    function renameDialog(title, oldKey) {
+      return new Promise(function(resolve) {
+        document.getElementById('renameTitle').textContent = title;
+        document.getElementById('renameOldKey').value = oldKey;
+        document.getElementById('renameNewKey').value = oldKey;
+        document.getElementById('renameOverlay').classList.add('show');
+        renameCb = resolve;
+      });
+    }
+    function renameResolve(save) {
+      document.getElementById('renameOverlay').classList.remove('show');
+      if (renameCb) {
+        renameCb(save ? document.getElementById('renameNewKey').value.trim() : null);
+        renameCb = null;
+      }
+    }
+    function toggleCheckAll(tab) {
+      var cb = document.getElementById(tab + '-check-all');
+      document.querySelectorAll('.' + tab + '-row-check').forEach(function(b) { b.checked = cb.checked; });
+    }
     function syntaxHighlight(obj) {
       var json = JSON.stringify(obj, null, 2);
       return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
         var cls = 'json-num';
-        if (/^"/.test(match)) {
-          cls = /:$/.test(match) ? 'json-key' : 'json-str';
-        } else if (/true|false/.test(match)) {
-          cls = 'json-bool';
-        } else if (/null/.test(match)) {
-          cls = 'json-null';
-        }
+        if (/^"/.test(match)) { cls = /:$/.test(match) ? 'json-key' : 'json-str'; }
+        else if (/true|false/.test(match)) { cls = 'json-bool'; }
+        else if (/null/.test(match)) { cls = 'json-null'; }
         return '<span class="' + cls + '">' + escHtml(match) + '</span>';
       });
     }
-    function byteSize(s) {
-      var b = new Blob([String(s)]).size;
-      if (b < 1024) return b + ' B';
-      return (b / 1024).toFixed(1) + ' KB';
-    }
+    // ── LocalStorage ──────────────────────────────────────────────────────
     function lsSet() {
       var k = document.getElementById('ls-key').value.trim();
       var v = document.getElementById('ls-val').value;
-      if (!k) { log('LS: key is empty', 'err'); return; }
+      if (!k) { log('Key is empty', 'err', 'Please enter a key'); return; }
+      if (LS_ALWAYS_SKIP[k]) { log('Key is reserved', 'err', '"' + k + '" is always reserved'); return; }
+      var existed = localStorage.getItem(k) !== null;
       localStorage.setItem(k, v);
-      log('LS set: ' + k, 'ok');
-      toast('Saved to LocalStorage', '💾');
+      log((existed ? 'Updated' : 'Created') + ': ' + k, 'ok', 'Value: "' + v + '" | Size: ' + byteSize(v));
+      toast(existed ? 'Updated' : 'Saved', '💾');
       lsRefresh();
     }
     function lsGet() {
       var k = document.getElementById('ls-key').value.trim();
-      if (!k) { log('LS: key is empty', 'err'); return; }
+      if (!k) { log('Key is empty', 'err'); return; }
       var v = localStorage.getItem(k);
       if (v === null) {
-        log('LS get: "' + k + '" not found', 'warn');
+        log('Key not found: ' + k, 'warn', 'No item with this key in LocalStorage');
       } else {
-        log('LS get: ' + k, 'info');
+        log('Got: ' + k, 'info', 'Value: "' + v + '" | Size: ' + byteSize(v));
         document.getElementById('ls-val').value = v;
       }
     }
-    function lsRemove() {
-      var k = document.getElementById('ls-key').value.trim();
-      if (!k) { log('LS: key is empty', 'err'); return; }
-      if (localStorage.getItem(k) === null) { log('LS: "' + k + '" not found', 'warn'); return; }
-      confirmDialog('Remove item', 'Delete "' + k + '" from LocalStorage?').then(function(ok) {
+    function lsRemoveChecked() {
+      var checked = Array.from(document.querySelectorAll('.ls-row-check:checked')).map(function(c) { return c.value; });
+      if (!checked.length) { log('No items selected', 'warn', 'Check at least one item to remove'); toast('Select items first!', '⚠️'); return; }
+      confirmDialog('Remove selected', 'Delete ' + checked.length + ' selected item(s)?').then(function(ok) {
         if (!ok) return;
-        localStorage.removeItem(k);
-        log('LS removed: ' + k, 'ok');
-        toast('Removed', '🗑️');
-        document.getElementById('ls-val').value = '';
+        checked.forEach(function(k) {
+          var v = localStorage.getItem(k);
+          localStorage.removeItem(k);
+          log('Removed: ' + k, 'ok', 'Value was: "' + v + '"');
+        });
+        toast('Removed ' + checked.length + ' item(s)', '🗑️');
         lsRefresh();
       });
     }
     function lsClear() {
-      var keys = Object.keys(localStorage).filter(function(k) { return k !== 'sm-theme' && k !== 'sm-tab' && k !== 'sm-views'; });
-      if (!keys.length) { log('LS: nothing to clear', 'warn'); return; }
+      var keys = lsAllKeys();
+      if (!keys.length) { log('Nothing to clear', 'warn'); return; }
       confirmDialog('Clear LocalStorage', 'Delete all ' + keys.length + ' items?').then(function(ok) {
         if (!ok) return;
         keys.forEach(function(k) { localStorage.removeItem(k); });
-        log('LS cleared (' + keys.length + ' items)', 'ok');
-        toast('LocalStorage cleared', '🧹');
+        log('Cleared LocalStorage', 'ok', keys.length + ' items removed');
+        toast('Cleared', '🧹');
         lsRefresh();
       });
     }
     function lsRefresh() {
       applyViewMode('ls');
       var search = (document.getElementById('ls-search').value || '').toLowerCase();
-      var skip = { 'sm-theme': 1, 'sm-tab': 1, 'sm-views': 1 };
-      var keys = Object.keys(localStorage).filter(function(k) { return !skip[k]; });
+      var keys = lsAllKeys();
       var filtered = keys.filter(function(k) {
-        return !search || k.toLowerCase().includes(search) || (localStorage.getItem(k) || '').toLowerCase().includes(search);
+        return !search || k.toLowerCase().indexOf(search) !== -1 || (localStorage.getItem(k) || '').toLowerCase().indexOf(search) !== -1;
       });
       document.getElementById('badge-ls').textContent = keys.length;
       var tbody = document.getElementById('ls-tbody');
       tbody.innerHTML = '';
       if (!filtered.length) {
         var tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="4"><div class="empty-state"><div class="empty-icon">💾</div>' + (search ? 'No results' : 'No items') + '</div></td>';
+        tr.innerHTML = '<td colspan="5"><div class="empty-state"><div class="empty-icon">💾</div>' + (search ? 'No results for "' + escHtml(search) + '"' : 'No items yet') + '</div></td>';
         tbody.appendChild(tr);
       } else {
         filtered.forEach(function(k) {
           var v = localStorage.getItem(k);
+          var isSys = !!LS_SYS_KEYS[k];
           var tr = document.createElement('tr');
+          var tdCheck = document.createElement('td');
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 'ls-row-check';
+          cb.value = k;
+          tdCheck.appendChild(cb);
           var td1 = document.createElement('td');
           td1.className = 'td-key';
           td1.title = k;
-          td1.textContent = k;
+          td1.textContent = k + (isSys ? ' 🔧' : '');
           var td2 = document.createElement('td');
-          td2.className = 'td-val';
+          td2.className = settings.wrap ? 'td-val td-full' : 'td-val';
           td2.title = v;
           td2.textContent = v;
           var td3 = document.createElement('td');
@@ -1372,19 +1749,29 @@
           var btnEdit = document.createElement('button');
           btnEdit.className = 'btn btn-ghost btn-sm';
           btnEdit.textContent = '✏️';
+          btnEdit.title = 'Edit value';
           btnEdit.onclick = function() { lsEditItem(k); };
+          var btnRename = document.createElement('button');
+          btnRename.className = 'btn btn-ghost btn-sm';
+          btnRename.textContent = '🏷️';
+          btnRename.title = 'Rename key';
+          btnRename.onclick = function() { lsRenameItem(k); };
           var btnCopy = document.createElement('button');
           btnCopy.className = 'btn btn-ghost btn-sm';
           btnCopy.textContent = '📋';
+          btnCopy.title = 'Copy value';
           btnCopy.onclick = function() { lsCopyItem(k); };
           var btnDel = document.createElement('button');
           btnDel.className = 'btn btn-danger btn-sm';
           btnDel.textContent = '🗑️';
+          btnDel.title = 'Delete';
           btnDel.onclick = function() { lsDeleteItem(k); };
           actDiv.appendChild(btnEdit);
+          actDiv.appendChild(btnRename);
           actDiv.appendChild(btnCopy);
           actDiv.appendChild(btnDel);
           td4.appendChild(actDiv);
+          tr.appendChild(tdCheck);
           tr.appendChild(td1);
           tr.appendChild(td2);
           tr.appendChild(td3);
@@ -1403,48 +1790,89 @@
       editDialog('Edit LocalStorage', k, v).then(function(newVal) {
         if (newVal === null) return;
         localStorage.setItem(k, newVal);
-        log('LS edited: ' + k, 'ok');
+        log('Edited: ' + k, 'ok', 'Old: "' + v + '" → New: "' + newVal + '"');
         toast('Updated', '✅');
+        lsRefresh();
+      });
+    }
+    function lsRenameItem(k) {
+      var v = localStorage.getItem(k);
+      renameDialog('Rename LocalStorage Key', k).then(function(newKey) {
+        if (!newKey || newKey === k) return;
+        if (LS_ALWAYS_SKIP[newKey]) { log('Rename failed: reserved', 'err'); toast('Reserved key!', '❌'); return; }
+        if (localStorage.getItem(newKey) !== null) { log('Rename failed: key exists', 'err'); toast('Key exists!', '❌'); return; }
+        localStorage.setItem(newKey, v);
+        localStorage.removeItem(k);
+        log('Renamed: "' + k + '" → "' + newKey + '"', 'ok', 'Value preserved');
+        toast('Renamed', '🏷️');
         lsRefresh();
       });
     }
     function lsCopyItem(k) {
       var v = localStorage.getItem(k);
       navigator.clipboard.writeText(v).then(function() {
-        toast('Copied: ' + k, '📋');
-        log('LS copied: ' + k, 'info');
+        toast('Copied!', '📋');
+        log('Copied: ' + k, 'info', 'Value: "' + v + '"');
       });
     }
     function lsDeleteItem(k) {
       confirmDialog('Delete item', 'Delete "' + k + '"?').then(function(ok) {
         if (!ok) return;
+        var v = localStorage.getItem(k);
         localStorage.removeItem(k);
-        log('LS deleted: ' + k, 'ok');
+        log('Deleted: ' + k, 'ok', 'Value was: "' + v + '" | Size: ' + byteSize(v));
         toast('Deleted', '🗑️');
         lsRefresh();
       });
     }
+    function lsExportSelected() {
+      var checked = Array.from(document.querySelectorAll('.ls-row-check:checked')).map(function(c) { return c.value; });
+      var keys = checked.length ? checked : lsAllKeys();
+      var obj = {};
+      keys.forEach(function(k) { obj[k] = localStorage.getItem(k); });
+      downloadJson({ type: 'localStorage', data: obj, exported: new Date().toISOString() }, 'ls-export-' + Date.now() + '.json');
+      log('Exported LocalStorage', 'ok', keys.length + ' keys exported');
+      toast('Exported ' + keys.length + ' items', '⬆️');
+    }
+    function lsTriggerImport() { document.getElementById('lsImportFile').click(); }
+    function lsImport(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      readJson(file, function(data) {
+        var obj = data.data || data;
+        var count = 0;
+        Object.keys(obj).forEach(function(k) {
+          if (!LS_ALWAYS_SKIP[k]) { localStorage.setItem(k, obj[k]); count++; }
+        });
+        log('Imported into LocalStorage', 'ok', count + ' items from ' + file.name);
+        toast('Imported ' + count + ' items', '⬇️');
+        lsRefresh();
+      });
+      e.target.value = '';
+    }
+    // ── Cookies ───────────────────────────────────────────────────────────
     function ckSet() {
       var k = document.getElementById('ck-key').value.trim();
       var v = document.getElementById('ck-val').value;
       var days = parseInt(document.getElementById('ck-days').value) || 7;
       var path = document.getElementById('ck-path').value || '/';
       var same = document.getElementById('ck-same').value;
-      if (!k) { log('Cookie: name is empty', 'err'); return; }
+      if (!k) { log('Cookie name is empty', 'err'); return; }
+      var existed = getCookie(k) !== null;
       var exp = new Date(Date.now() + days * 864e5).toUTCString();
       document.cookie = encodeURIComponent(k) + '=' + encodeURIComponent(v) + ';expires=' + exp + ';path=' + path + ';SameSite=' + same;
-      log('Cookie set: ' + k, 'ok');
-      toast('Cookie set', '🍪');
+      log((existed ? 'Updated' : 'Created') + ' cookie: ' + k, 'ok', 'Value: "' + v + '" | Expires: ' + days + 'd | Path: ' + path + ' | SameSite: ' + same);
+      toast('Cookie ' + (existed ? 'updated' : 'set'), '🍪');
       ckRefresh();
     }
     function ckGet() {
       var k = document.getElementById('ck-key').value.trim();
-      if (!k) { log('Cookie: name is empty', 'err'); return; }
+      if (!k) { log('Cookie name is empty', 'err'); return; }
       var v = getCookie(k);
       if (v === null) {
-        log('Cookie: "' + k + '" not found', 'warn');
+        log('Cookie not found: ' + k, 'warn', 'No cookie with this name');
       } else {
-        log('Cookie get: ' + k, 'info');
+        log('Got cookie: ' + k, 'info', 'Value: "' + v + '" | Size: ' + byteSize(v));
         document.getElementById('ck-val').value = v;
       }
     }
@@ -1464,16 +1892,13 @@
       });
       return res;
     }
-    function ckRemove() {
-      var k = document.getElementById('ck-key').value.trim();
-      if (!k) { log('Cookie: name is empty', 'err'); return; }
-      if (getCookie(k) === null) { log('Cookie: "' + k + '" not found', 'warn'); return; }
-      confirmDialog('Delete cookie', 'Delete cookie "' + k + '"?').then(function(ok) {
+    function ckRemoveChecked() {
+      var checked = Array.from(document.querySelectorAll('.cookie-row-check:checked')).map(function(c) { return c.value; });
+      if (!checked.length) { log('No cookies selected', 'warn'); toast('Select cookies first!', '⚠️'); return; }
+      confirmDialog('Remove selected', 'Delete ' + checked.length + ' selected cookie(s)?').then(function(ok) {
         if (!ok) return;
-        deleteCookie(k);
-        log('Cookie removed: ' + k, 'ok');
-        toast('Cookie removed', '🗑️');
-        document.getElementById('ck-val').value = '';
+        checked.forEach(function(k) { deleteCookie(k); log('Removed cookie: ' + k, 'ok'); });
+        toast('Removed ' + checked.length + ' cookie(s)', '🗑️');
         ckRefresh();
       });
     }
@@ -1483,11 +1908,11 @@
     function ckClearAll() {
       var cookies = parseCookies();
       var names = Object.keys(cookies);
-      if (!names.length) { log('Cookies: nothing to clear', 'warn'); return; }
+      if (!names.length) { log('No cookies to clear', 'warn'); return; }
       confirmDialog('Clear all cookies', 'Delete all ' + names.length + ' cookies?').then(function(ok) {
         if (!ok) return;
         names.forEach(deleteCookie);
-        log('Cookies cleared (' + names.length + ')', 'ok');
+        log('Cleared all cookies', 'ok', names.length + ' cookies removed');
         toast('Cookies cleared', '🧹');
         ckRefresh();
       });
@@ -1497,25 +1922,31 @@
       var search = (document.getElementById('ck-search').value || '').toLowerCase();
       var cookies = parseCookies();
       var names = Object.keys(cookies).filter(function(k) {
-        return !search || k.toLowerCase().includes(search) || cookies[k].toLowerCase().includes(search);
+        return !search || k.toLowerCase().indexOf(search) !== -1 || cookies[k].toLowerCase().indexOf(search) !== -1;
       });
       document.getElementById('badge-cookie').textContent = Object.keys(cookies).length;
       var tbody = document.getElementById('ck-tbody');
       tbody.innerHTML = '';
       if (!names.length) {
         var tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3"><div class="empty-state"><div class="empty-icon">🍪</div>' + (search ? 'No results' : 'No cookies') + '</div></td>';
+        tr.innerHTML = '<td colspan="4"><div class="empty-state"><div class="empty-icon">🍪</div>' + (search ? 'No results' : 'No cookies') + '</div></td>';
         tbody.appendChild(tr);
       } else {
         names.forEach(function(k) {
           var v = cookies[k];
           var tr = document.createElement('tr');
+          var tdCheck = document.createElement('td');
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 'cookie-row-check';
+          cb.value = k;
+          tdCheck.appendChild(cb);
           var td1 = document.createElement('td');
           td1.className = 'td-key';
           td1.title = k;
           td1.textContent = k;
           var td2 = document.createElement('td');
-          td2.className = 'td-val';
+          td2.className = settings.wrap ? 'td-val td-full' : 'td-val';
           td2.title = v;
           td2.textContent = v;
           var td3 = document.createElement('td');
@@ -1525,6 +1956,10 @@
           btnEdit.className = 'btn btn-ghost btn-sm';
           btnEdit.textContent = '✏️';
           btnEdit.onclick = function() { ckEditItem(k); };
+          var btnRename = document.createElement('button');
+          btnRename.className = 'btn btn-ghost btn-sm';
+          btnRename.textContent = '🏷️';
+          btnRename.onclick = function() { ckRenameItem(k); };
           var btnCopy = document.createElement('button');
           btnCopy.className = 'btn btn-ghost btn-sm';
           btnCopy.textContent = '📋';
@@ -1534,9 +1969,11 @@
           btnDel.textContent = '🗑️';
           btnDel.onclick = function() { ckDeleteItem(k); };
           actDiv.appendChild(btnEdit);
+          actDiv.appendChild(btnRename);
           actDiv.appendChild(btnCopy);
           actDiv.appendChild(btnDel);
           td3.appendChild(actDiv);
+          tr.appendChild(tdCheck);
           tr.appendChild(td1);
           tr.appendChild(td2);
           tr.appendChild(td3);
@@ -1554,288 +1991,591 @@
       editDialog('Edit Cookie', k, v).then(function(newVal) {
         if (newVal === null) return;
         document.cookie = encodeURIComponent(k) + '=' + encodeURIComponent(newVal) + ';path=/;SameSite=Lax';
-        log('Cookie edited: ' + k, 'ok');
+        log('Edited cookie: ' + k, 'ok', 'Old: "' + v + '" → New: "' + newVal + '"');
         toast('Cookie updated', '✅');
+        ckRefresh();
+      });
+    }
+    function ckRenameItem(k) {
+      var v = getCookie(k);
+      renameDialog('Rename Cookie', k).then(function(newKey) {
+        if (!newKey || newKey === k) return;
+        document.cookie = encodeURIComponent(newKey) + '=' + encodeURIComponent(v) + ';path=/;SameSite=Lax';
+        deleteCookie(k);
+        log('Renamed cookie: "' + k + '" → "' + newKey + '"', 'ok');
+        toast('Cookie renamed', '🏷️');
         ckRefresh();
       });
     }
     function ckCopyItem(k) {
       var v = getCookie(k);
       navigator.clipboard.writeText(v).then(function() {
-        toast('Copied: ' + k, '📋');
-        log('Cookie copied: ' + k, 'info');
+        toast('Copied!', '📋');
+        log('Copied cookie: ' + k, 'info', 'Value: "' + v + '"');
       });
     }
     function ckDeleteItem(k) {
       confirmDialog('Delete cookie', 'Delete "' + k + '"?').then(function(ok) {
         if (!ok) return;
         deleteCookie(k);
-        log('Cookie deleted: ' + k, 'ok');
+        log('Deleted cookie: ' + k, 'ok');
         toast('Cookie deleted', '🗑️');
         ckRefresh();
       });
     }
+    function ckExportSelected() {
+      var checked = Array.from(document.querySelectorAll('.cookie-row-check:checked')).map(function(c) { return c.value; });
+      var cookies = parseCookies();
+      var keys = checked.length ? checked : Object.keys(cookies);
+      var obj = {};
+      keys.forEach(function(k) { if (k in cookies) obj[k] = cookies[k]; });
+      downloadJson({ type: 'cookies', data: obj, exported: new Date().toISOString() }, 'cookies-export-' + Date.now() + '.json');
+      log('Exported cookies', 'ok', keys.length + ' cookies exported');
+      toast('Exported ' + keys.length + ' cookies', '⬆️');
+    }
+    function ckTriggerImport() { document.getElementById('ckImportFile').click(); }
+    function ckImport(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      readJson(file, function(data) {
+        var obj = data.data || data;
+        var count = 0;
+        Object.keys(obj).forEach(function(k) {
+          document.cookie = encodeURIComponent(k) + '=' + encodeURIComponent(obj[k]) + ';path=/;SameSite=Lax';
+          count++;
+        });
+        log('Imported cookies', 'ok', count + ' cookies from ' + file.name);
+        toast('Imported ' + count + ' cookies', '⬇️');
+        ckRefresh();
+      });
+      e.target.value = '';
+    }
+    // ── IndexedDB Browser ─────────────────────────────────────────────────
+    function idbPathRoot() {
+      selectedDbName = '';
+      updatePathBar(null, null);
+      document.getElementById('idb-store-panel-list').innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">No database selected</div>';
+      document.getElementById('idb-store-panel-hint').textContent = '← select a database';
+      idbListDatabases();
+    }
+    function updatePathBar(dbName, storeName) {
+      var bar = document.getElementById('idb-path-bar');
+      bar.innerHTML = '';
+      var root = document.createElement('span');
+      root.className = 'idb-path-seg root';
+      root.textContent = '🗄️ /';
+      root.onclick = idbPathRoot;
+      bar.appendChild(root);
+      if (dbName) {
+        var sep1 = document.createElement('span');
+        sep1.className = 'idb-path-sep';
+        sep1.textContent = ' / ';
+        bar.appendChild(sep1);
+        var segDb = document.createElement('span');
+        segDb.className = 'idb-path-seg';
+        segDb.textContent = dbName;
+        segDb.onclick = function() { idbSelectDatabase(dbName); };
+        bar.appendChild(segDb);
+      }
+      if (storeName) {
+        var sep2 = document.createElement('span');
+        sep2.className = 'idb-path-sep';
+        sep2.textContent = ' / ';
+        bar.appendChild(sep2);
+        var segStore = document.createElement('span');
+        segStore.className = 'idb-path-seg';
+        segStore.textContent = storeName;
+        bar.appendChild(segStore);
+      }
+    }
     function idbListDatabases() {
+      var panelList = document.getElementById('idb-db-panel-list');
       if (!indexedDB.databases) {
-        document.getElementById('idb-db-list').innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:13px;">⚠️ Browser does not support listing databases</div>';
+        panelList.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">⚠️ Not supported in this browser</div>';
         return;
       }
       indexedDB.databases().then(function(dbs) {
-        var list = document.getElementById('idb-db-list');
-        list.innerHTML = '';
-        if (!dbs || dbs.length === 0) {
-          list.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:13px;">No databases found</div>';
+        panelList.innerHTML = '';
+        if (!dbs || !dbs.length) {
+          panelList.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">No databases found</div>';
+          document.getElementById('badge-idb').textContent = '0';
           return;
         }
+        document.getElementById('badge-idb').textContent = dbs.length;
         dbs.forEach(function(db) {
           var item = document.createElement('div');
-          item.className = 'idb-db-item';
-          var name = document.createElement('div');
-          name.className = 'idb-db-name';
+          item.className = 'idb-tree-item' + (db.name === selectedDbName ? ' selected' : '');
+          var icon = document.createElement('span');
+          icon.className = 'item-icon';
+          icon.textContent = '🗄️';
+          var name = document.createElement('span');
+          name.className = 'item-name';
           name.textContent = db.name;
-          var ver = document.createElement('div');
-          ver.className = 'idb-db-stores';
-          ver.textContent = 'v' + (db.version || '?');
-          var btnOpen = document.createElement('button');
-          btnOpen.className = 'btn btn-ghost btn-sm';
-          btnOpen.textContent = '📂 Open';
-          btnOpen.onclick = function() {
-            document.getElementById('idb-db-name').value = db.name;
-            idbOpenStore();
-          };
+          name.title = db.name;
+          var badge = document.createElement('span');
+          badge.className = 'item-badge';
+          badge.textContent = 'v' + (db.version || '?');
+          var btnRename = document.createElement('button');
+          btnRename.className = 'btn btn-ghost btn-sm';
+          btnRename.style.cssText = 'padding:2px 6px;font-size:11px;';
+          btnRename.textContent = '🏷️';
+          btnRename.title = 'Rename database (creates new + migrates)';
+          btnRename.onclick = function(e) { e.stopPropagation(); idbRenameDatabase(db.name, db.version); };
           var btnDel = document.createElement('button');
           btnDel.className = 'btn btn-danger btn-sm';
+          btnDel.style.cssText = 'padding:2px 6px;font-size:11px;';
           btnDel.textContent = '🗑️';
-          btnDel.onclick = function() { idbDeleteDatabase(db.name); };
+          btnDel.title = 'Delete database';
+          btnDel.onclick = function(e) { e.stopPropagation(); idbDeleteDatabase(db.name); };
+          item.appendChild(icon);
           item.appendChild(name);
-          item.appendChild(ver);
-          item.appendChild(btnOpen);
+          item.appendChild(badge);
+          item.appendChild(btnRename);
           item.appendChild(btnDel);
-          list.appendChild(item);
+          item.onclick = function() { idbSelectDatabase(db.name); };
+          panelList.appendChild(item);
         });
-        document.getElementById('badge-idb').textContent = dbs.length;
       }).catch(function(err) {
-        log('IDB list error: ' + err.message, 'err');
+        log('Failed to list IDB databases', 'err', err.message);
       });
     }
-    function idbDeleteDatabase(dbName) {
-      confirmDialog('Delete Database', 'Permanently delete database "' + dbName + '"?').then(function(ok) {
-        if (!ok) return;
-        var req = indexedDB.deleteDatabase(dbName);
-        req.onsuccess = function() {
-          log('IDB database deleted: ' + dbName, 'ok');
-          toast('Database deleted', '🗑️');
-          idbListDatabases();
-          if (idbDb && idbDbName === dbName) {
-            idbDb = null;
-            document.getElementById('idb-status').textContent = 'Not connected';
-            idbRefresh();
+    function idbRenameDatabase(oldName, version) {
+      renameDialog('Rename Database', oldName).then(function(newName) {
+        if (!newName || newName === oldName) return;
+        var reqOld = indexedDB.open(oldName);
+        reqOld.onsuccess = function(e) {
+          var oldDb = e.target.result;
+          var stores = Array.from(oldDb.objectStoreNames);
+          oldDb.close();
+          var reqNew = indexedDB.open(newName, 1);
+          reqNew.onupgradeneeded = function(ev) {
+            var newDb = ev.target.result;
+            stores.forEach(function(s) { newDb.createObjectStore(s); });
+          };
+          reqNew.onsuccess = function(ev) {
+            var newDb = ev.target.result;
+            var pending = stores.length;
+            if (!pending) {
+              newDb.close();
+              idbDeleteDatabaseSilent(oldName);
+              log('Database renamed: "' + oldName + '" → "' + newName + '"', 'ok', 'Empty database renamed');
+              toast('Renamed', '🏷️');
+              idbListDatabases();
+              return;
+            }
+            stores.forEach(function(storeName) {
+              var txOld = indexedDB.open(oldName);
+              txOld.onsuccess = function(oe) {
+                var odb = oe.target.result;
+                var tx = odb.transaction([storeName], 'readonly');
+                var store = tx.objectStore(storeName);
+                var allKeys, allVals;
+                store.getAllKeys().onsuccess = function(ke) {
+                  allKeys = ke.target.result;
+                  store.getAll().onsuccess = function(ve) {
+                    allVals = ve.target.result;
+                    odb.close();
+                    var txNew = newDb.transaction([storeName], 'readwrite');
+                    var newStore = txNew.objectStore(storeName);
+                    allKeys.forEach(function(k, i) { newStore.put(allVals[i], k); });
+                    txNew.oncomplete = function() {
+                      pending--;
+                      if (pending === 0) {
+                        newDb.close();
+                        idbDeleteDatabaseSilent(oldName);
+                        log('Database renamed: "' + oldName + '" → "' + newName + '"', 'ok', stores.length + ' stores migrated');
+                        toast('Database renamed', '🏷️');
+                        if (idbDbName === oldName) {
+                          idbDbName = newName;
+                          idbConnectTo(newName, idbStoreName);
+                        }
+                        idbListDatabases();
+                      }
+                    };
+                  };
+                };
+              };
+            });
+          };
+          reqNew.onerror = function(ev) {
+            log('Rename failed: could not create new database', 'err', String(ev.target.error));
+          };
+        };
+        reqOld.onerror = function(e) {
+          log('Rename failed: could not open old database', 'err', String(e.target.error));
+        };
+      });
+    }
+    function idbDeleteDatabaseSilent(name) {
+      indexedDB.deleteDatabase(name);
+    }
+    function idbSelectDatabase(dbName) {
+      selectedDbName = dbName;
+      updatePathBar(dbName, null);
+      document.getElementById('idb-store-panel-hint').textContent = '';
+      idbListDatabases();
+      var req = indexedDB.open(dbName);
+      req.onsuccess = function(e) {
+        var db = e.target.result;
+        var stores = Array.from(db.objectStoreNames);
+        db.close();
+        renderStorePanel(stores, dbName);
+      };
+      req.onerror = function(e) {
+        log('Failed to open database: ' + dbName, 'err', String(e.target.error));
+      };
+    }
+    function renderStorePanel(stores, dbName) {
+      var panel = document.getElementById('idb-store-panel-list');
+      panel.innerHTML = '';
+      if (!stores.length) {
+        panel.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">No stores found</div>';
+        return;
+      }
+      stores.forEach(function(storeName) {
+        var isActive = dbName === idbDbName && storeName === idbStoreName;
+        var item = document.createElement('div');
+        item.className = 'idb-tree-item' + (isActive ? ' selected' : '');
+        var icon = document.createElement('span');
+        icon.className = 'item-icon';
+        icon.textContent = '📦';
+        var name = document.createElement('span');
+        name.className = 'item-name';
+        name.textContent = storeName;
+        name.title = storeName;
+        var btnOpen = document.createElement('button');
+        btnOpen.className = 'btn btn-ghost btn-sm';
+        btnOpen.style.cssText = 'padding:2px 8px;font-size:11px;';
+        btnOpen.textContent = 'Open';
+        btnOpen.onclick = function(e) { e.stopPropagation(); idbConnectTo(dbName, storeName); };
+        var btnRename = document.createElement('button');
+        btnRename.className = 'btn btn-ghost btn-sm';
+        btnRename.style.cssText = 'padding:2px 6px;font-size:11px;';
+        btnRename.textContent = '🏷️';
+        btnRename.title = 'Rename store';
+        btnRename.onclick = function(e) { e.stopPropagation(); idbRenameStore(dbName, storeName); };
+        var btnDel = document.createElement('button');
+        btnDel.className = 'btn btn-danger btn-sm';
+        btnDel.style.cssText = 'padding:2px 6px;font-size:11px;';
+        btnDel.textContent = '🗑️';
+        btnDel.title = 'Delete store';
+        btnDel.onclick = function(e) { e.stopPropagation(); idbDeleteStore(dbName, storeName); };
+        item.appendChild(icon);
+        item.appendChild(name);
+        item.appendChild(btnOpen);
+        item.appendChild(btnRename);
+        item.appendChild(btnDel);
+        item.onclick = function() { idbConnectTo(dbName, storeName); };
+        panel.appendChild(item);
+      });
+    }
+    function idbRenameStore(dbName, oldStore) {
+      renameDialog('Rename Store', oldStore).then(function(newStore) {
+        if (!newStore || newStore === oldStore) return;
+        var reqCheck = indexedDB.open(dbName);
+        reqCheck.onsuccess = function(e) {
+          var db = e.target.result;
+          var currentVersion = db.version;
+          var storeNames = Array.from(db.objectStoreNames);
+          if (storeNames.indexOf(newStore) !== -1) {
+            db.close();
+            log('Rename failed: store "' + newStore + '" already exists', 'err');
+            toast('Store already exists!', '❌');
+            return;
           }
+          db.close();
+          var req = indexedDB.open(dbName, currentVersion + 1);
+          req.onupgradeneeded = function(ev) {
+            var upgradeDb = ev.target.result;
+            var tx = ev.target.transaction;
+            var oldStoreRef = tx.objectStore(oldStore);
+            upgradeDb.createObjectStore(newStore);
+            var newStoreRef = tx.objectStore(newStore);
+            oldStoreRef.getAll().onsuccess = function(ve) {
+              var vals = ve.target.result;
+              oldStoreRef.getAllKeys().onsuccess = function(ke) {
+                var keys = ke.target.result;
+                keys.forEach(function(k, i) { newStoreRef.put(vals[i], k); });
+                upgradeDb.deleteObjectStore(oldStore);
+              };
+            };
+          };
+          req.onsuccess = function(ev) {
+            ev.target.result.close();
+            log('Store renamed: "' + oldStore + '" → "' + newStore + '"', 'ok', 'Database: ' + dbName);
+            toast('Store renamed', '🏷️');
+            if (idbDbName === dbName && idbStoreName === oldStore) {
+              idbConnectTo(dbName, newStore);
+            } else {
+              idbSelectDatabase(dbName);
+            }
+          };
+          req.onerror = function(ev) {
+            log('Store rename failed', 'err', String(ev.target.error));
+          };
         };
-        req.onerror = function(e) {
-          log('IDB delete error: ' + e.target.error, 'err');
+        reqCheck.onerror = function(e) {
+          log('Failed to open database for rename', 'err', String(e.target.error));
         };
       });
     }
-    function idbOpenStore() {
-      var dbName = document.getElementById('idb-db-name').value.trim() || 'myDatabase';
-      var storeName = document.getElementById('idb-store').value.trim() || 'myStore';
+    function idbDeleteStore(dbName, storeName) {
+      confirmDialog('Delete Store', 'Permanently delete store "' + storeName + '" and all its data?').then(function(ok) {
+        if (!ok) return;
+        var reqCheck = indexedDB.open(dbName);
+        reqCheck.onsuccess = function(e) {
+          var db = e.target.result;
+          var currentVersion = db.version;
+          db.close();
+          var req = indexedDB.open(dbName, currentVersion + 1);
+          req.onupgradeneeded = function(ev) {
+            ev.target.result.deleteObjectStore(storeName);
+          };
+          req.onsuccess = function(ev) {
+            ev.target.result.close();
+            log('Store deleted: ' + storeName, 'ok', 'Database: ' + dbName);
+            toast('Store deleted', '🗑️');
+            if (idbDbName === dbName && idbStoreName === storeName) {
+              idbDb = null;
+              idbStoreName = '';
+              document.getElementById('idb-status').textContent = 'Not connected';
+              updatePathBar(dbName, null);
+            }
+            idbSelectDatabase(dbName);
+          };
+          req.onerror = function(ev) {
+            log('Store delete failed', 'err', String(ev.target.error));
+          };
+        };
+      });
+    }
+    function idbConnectTo(dbName, storeName) {
+      if (idbDb) { idbDb.close(); idbDb = null; }
       idbDbName = dbName;
       idbStoreName = storeName;
+      updatePathBar(dbName, storeName);
       document.getElementById('idb-status').textContent = 'Connecting...';
-      var req = indexedDB.open(dbName, 1);
-      req.onupgradeneeded = function(e) {
-        var db = e.target.result;
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName);
-        }
-      };
+      var req = indexedDB.open(dbName);
       req.onsuccess = function(e) {
         idbDb = e.target.result;
         if (!idbDb.objectStoreNames.contains(storeName)) {
+          var ver = idbDb.version;
           idbDb.close();
-          var req2 = indexedDB.open(dbName, idbDb.version + 1);
+          var req2 = indexedDB.open(dbName, ver + 1);
           req2.onupgradeneeded = function(ev) {
-            var db2 = ev.target.result;
-            if (!db2.objectStoreNames.contains(storeName)) {
-              db2.createObjectStore(storeName);
-            }
+            ev.target.result.createObjectStore(storeName);
           };
           req2.onsuccess = function(ev) {
             idbDb = ev.target.result;
-            document.getElementById('idb-status').innerHTML = '<span class="status-dot"></span>' + dbName + ' → ' + storeName;
-            log('IDB opened: ' + dbName + ' → ' + storeName, 'ok');
-            idbListDatabases();
-            idbRefresh();
+            finishConnect(dbName, storeName);
           };
           req2.onerror = function(ev) {
             document.getElementById('idb-status').textContent = 'Error';
-            log('IDB error: ' + ev.target.error, 'err');
+            log('Failed to create store', 'err', String(ev.target.error));
           };
           return;
         }
-        document.getElementById('idb-status').innerHTML = '<span class="status-dot"></span>' + dbName + ' → ' + storeName;
-        log('IDB opened: ' + dbName + ' → ' + storeName, 'ok');
-        idbListDatabases();
-        idbRefresh();
+        finishConnect(dbName, storeName);
       };
       req.onerror = function(e) {
         document.getElementById('idb-status').textContent = 'Error';
-        log('IDB open error: ' + e.target.error, 'err');
+        log('Failed to connect', 'err', String(e.target.error));
       };
     }
+    function finishConnect(dbName, storeName) {
+      document.getElementById('idb-status').innerHTML = '<span class="status-dot"></span>' + dbName + ' / ' + storeName;
+      log('Connected: ' + dbName + ' → ' + storeName, 'ok', 'Version: ' + idbDb.version);
+      toast('Connected: ' + storeName, '🗃️');
+      renderStorePanel(Array.from(idbDb.objectStoreNames), dbName);
+      idbListDatabases();
+      idbRefresh();
+    }
+    function idbDisconnect() {
+      if (idbDb) { idbDb.close(); idbDb = null; }
+      idbDbName = '';
+      idbStoreName = '';
+      document.getElementById('idb-status').textContent = 'Not connected';
+      updatePathBar(null, null);
+      idbRefresh();
+      log('Disconnected from IDB', 'info');
+    }
+    function idbDeleteDatabase(dbName) {
+      confirmDialog('Delete Database', 'Permanently delete database "' + dbName + '" and ALL its data?').then(function(ok) {
+        if (!ok) return;
+        if (idbDb && idbDbName === dbName) {
+          idbDb.close();
+          idbDb = null;
+          idbDbName = '';
+          idbStoreName = '';
+          document.getElementById('idb-status').textContent = 'Not connected';
+          updatePathBar(null, null);
+        }
+        var req = indexedDB.deleteDatabase(dbName);
+        req.onsuccess = function() {
+          log('Database deleted: ' + dbName, 'ok');
+          toast('Database deleted', '🗑️');
+          selectedDbName = '';
+          idbListDatabases();
+          document.getElementById('idb-store-panel-list').innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">No database selected</div>';
+          idbRefresh();
+        };
+        req.onerror = function(e) {
+          log('Failed to delete database: ' + dbName, 'err', String(e.target.error));
+        };
+      });
+    }
     function idbTx(mode) {
-      if (!idbDb) { log('IDB: not connected', 'err'); return null; }
-      if (!idbDb.objectStoreNames.contains(idbStoreName)) {
-        log('IDB: store "' + idbStoreName + '" not found', 'err');
-        return null;
-      }
+      if (!idbDb) { log('Not connected to any IDB store', 'err', 'Select a store from the browser above'); return null; }
+      if (!idbDb.objectStoreNames.contains(idbStoreName)) { log('Store not found: ' + idbStoreName, 'err'); return null; }
       return idbDb.transaction([idbStoreName], mode).objectStore(idbStoreName);
     }
     function idbSet() {
       var k = document.getElementById('idb-key').value.trim();
       var vRaw = document.getElementById('idb-val').value;
-      if (!k) { log('IDB: key is empty', 'err'); return; }
+      if (!k) { log('IDB key is empty', 'err'); return; }
       var v;
       try { v = JSON.parse(vRaw); } catch(e) { v = vRaw; }
       var store = idbTx('readwrite');
       if (!store) return;
-      var req = store.put(v, k);
-      req.onsuccess = function() {
-        log('IDB set: ' + k, 'ok');
-        toast('Saved to IndexedDB', '🗃️');
+      store.put(v, k).onsuccess = function() {
+        log('IDB set: ' + k, 'ok', 'Value: ' + JSON.stringify(v) + ' | Type: ' + typeof v + ' | Store: ' + idbStoreName);
+        toast('Saved to IDB', '🗃️');
         idbRefresh();
       };
-      req.onerror = function(e) { log('IDB set error: ' + e.target.error, 'err'); };
     }
     function idbGet() {
       var k = document.getElementById('idb-key').value.trim();
-      if (!k) { log('IDB: key is empty', 'err'); return; }
+      if (!k) { log('IDB key is empty', 'err'); return; }
       var store = idbTx('readonly');
       if (!store) return;
-      var req = store.get(k);
-      req.onsuccess = function() {
-        var v = req.result;
+      store.get(k).onsuccess = function(e) {
+        var v = e.target.result;
         if (v === undefined) {
-          log('IDB get: "' + k + '" not found', 'warn');
+          log('IDB key not found: ' + k, 'warn', 'Store: ' + idbStoreName);
         } else {
           var display = typeof v === 'object' ? JSON.stringify(v) : String(v);
-          log('IDB get: ' + k, 'info');
+          log('IDB got: ' + k, 'info', 'Value: ' + display + ' | Type: ' + typeof v + ' | Size: ' + byteSize(display));
           document.getElementById('idb-val').value = display;
         }
       };
-      req.onerror = function(e) { log('IDB get error: ' + e.target.error, 'err'); };
     }
-    function idbRemove() {
-      var k = document.getElementById('idb-key').value.trim();
-      if (!k) { log('IDB: key is empty', 'err'); return; }
-      confirmDialog('Delete IDB item', 'Delete "' + k + '"?').then(function(ok) {
+    function idbRemoveChecked() {
+      var checked = Array.from(document.querySelectorAll('.idb-row-check:checked')).map(function(c) { return c.value; });
+      if (!checked.length) { log('No IDB items selected', 'warn'); toast('Select items first!', '⚠️'); return; }
+      confirmDialog('Remove selected', 'Delete ' + checked.length + ' selected IDB item(s)?').then(function(ok) {
         if (!ok) return;
         var store = idbTx('readwrite');
         if (!store) return;
-        var req = store.delete(k);
-        req.onsuccess = function() {
-          log('IDB removed: ' + k, 'ok');
-          toast('Removed', '🗑️');
-          document.getElementById('idb-val').value = '';
-          idbRefresh();
-        };
-        req.onerror = function(e) { log('IDB remove error: ' + e.target.error, 'err'); };
+        checked.forEach(function(k) {
+          store.delete(k);
+          log('IDB removed: ' + k, 'ok', 'Store: ' + idbStoreName);
+        });
+        toast('Removed ' + checked.length + ' item(s)', '🗑️');
+        setTimeout(idbRefresh, 100);
       });
     }
     function idbClear() {
+      if (!idbStoreName) { log('No store selected', 'err'); return; }
       confirmDialog('Clear Store', 'Delete all items in "' + idbStoreName + '"?').then(function(ok) {
         if (!ok) return;
         var store = idbTx('readwrite');
         if (!store) return;
-        var req = store.clear();
-        req.onsuccess = function() {
-          log('IDB store cleared: ' + idbStoreName, 'ok');
+        store.clear().onsuccess = function() {
+          log('IDB store cleared', 'ok', 'Store: ' + idbStoreName);
           toast('Store cleared', '🧹');
           idbRefresh();
         };
-        req.onerror = function(e) { log('IDB clear error: ' + e.target.error, 'err'); };
       });
     }
     function idbGetAll(cb) {
       var store = idbTx('readonly');
       if (!store) { cb([]); return; }
-      var items = [];
-      var reqKeys = store.getAllKeys();
-      reqKeys.onsuccess = function() {
-        var keys = reqKeys.result;
-        var reqVals = idbTx('readonly').getAll();
-        reqVals.onsuccess = function() {
-          var vals = reqVals.result;
-          for (var i = 0; i < keys.length; i++) {
-            items.push({ key: keys[i], val: vals[i] });
-          }
-          cb(items);
+      store.getAllKeys().onsuccess = function(e) {
+        var keys = e.target.result;
+        idbTx('readonly').getAll().onsuccess = function(ev) {
+          cb(keys.map(function(k, i) { return { key: k, val: ev.target.result[i] }; }));
         };
-        reqVals.onerror = function() { cb([]); };
       };
-      reqKeys.onerror = function() { cb([]); };
     }
     function idbRefresh() {
       applyViewMode('idb');
-      if (!idbDb) {
-        document.getElementById('idb-tbody').innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">🗃️</div>Open a store first</div></td></tr>';
+      if (!idbDb || !idbStoreName) {
+        document.getElementById('idb-tbody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🗃️</div>Select a store from the browser above</div></td></tr>';
         return;
       }
       var search = (document.getElementById('idb-search').value || '').toLowerCase();
       idbGetAll(function(items) {
         var filtered = items.filter(function(it) {
           var vs = typeof it.val === 'object' ? JSON.stringify(it.val) : String(it.val);
-          return !search || String(it.key).toLowerCase().includes(search) || vs.toLowerCase().includes(search);
+          return !search || String(it.key).toLowerCase().indexOf(search) !== -1 || vs.toLowerCase().indexOf(search) !== -1;
         });
         var tbody = document.getElementById('idb-tbody');
         tbody.innerHTML = '';
         if (!filtered.length) {
           var tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="4"><div class="empty-state"><div class="empty-icon">🗃️</div>' + (search ? 'No results' : 'No items') + '</div></td>';
+          tr.innerHTML = '<td colspan="6"><div class="empty-state"><div class="empty-icon">🗃️</div>' + (search ? 'No results' : 'No items in store') + '</div></td>';
           tbody.appendChild(tr);
         } else {
           filtered.forEach(function(it) {
             var vs = typeof it.val === 'object' ? JSON.stringify(it.val) : String(it.val);
             var type = typeof it.val;
             var tr = document.createElement('tr');
+            var tdCheck = document.createElement('td');
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'idb-row-check';
+            cb.value = it.key;
+            tdCheck.appendChild(cb);
             var td1 = document.createElement('td');
             td1.className = 'td-key';
             td1.title = it.key;
             td1.textContent = it.key;
             var td2 = document.createElement('td');
-            td2.className = 'td-val';
+            td2.className = settings.wrap ? 'td-val td-full' : 'td-val';
             td2.title = vs;
             td2.textContent = vs;
             var td3 = document.createElement('td');
-            td3.style.fontSize = '12px';
             var pill = document.createElement('span');
             pill.className = 'pill pill-idb';
             pill.textContent = type;
             td3.appendChild(pill);
             var td4 = document.createElement('td');
+            td4.style.cssText = 'white-space:nowrap;font-size:12px;color:var(--text-muted)';
+            td4.textContent = byteSize(vs);
+            var td5 = document.createElement('td');
             var actDiv = document.createElement('div');
             actDiv.className = 'td-actions';
             var btnEdit = document.createElement('button');
             btnEdit.className = 'btn btn-ghost btn-sm';
             btnEdit.textContent = '✏️';
+            btnEdit.title = 'Edit value';
             btnEdit.onclick = function() { idbEditItem(it.key); };
+            var btnRename = document.createElement('button');
+            btnRename.className = 'btn btn-ghost btn-sm';
+            btnRename.textContent = '🏷️';
+            btnRename.title = 'Rename key';
+            btnRename.onclick = function() { idbRenameItem(it.key); };
             var btnCopy = document.createElement('button');
             btnCopy.className = 'btn btn-ghost btn-sm';
             btnCopy.textContent = '📋';
+            btnCopy.title = 'Copy value';
             btnCopy.onclick = function() { idbCopyItem(it.key); };
             var btnDel = document.createElement('button');
             btnDel.className = 'btn btn-danger btn-sm';
             btnDel.textContent = '🗑️';
+            btnDel.title = 'Delete';
             btnDel.onclick = function() { idbDeleteItem(it.key); };
             actDiv.appendChild(btnEdit);
+            actDiv.appendChild(btnRename);
             actDiv.appendChild(btnCopy);
             actDiv.appendChild(btnDel);
-            td4.appendChild(actDiv);
+            td5.appendChild(actDiv);
+            tr.appendChild(tdCheck);
             tr.appendChild(td1);
             tr.appendChild(td2);
             tr.appendChild(td3);
             tr.appendChild(td4);
+            tr.appendChild(td5);
             tbody.appendChild(tr);
           });
         }
@@ -1852,16 +2592,33 @@
       store.get(k).onsuccess = function(e) {
         var v = e.target.result;
         var vs = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v);
-        editDialog('Edit IndexedDB Item', k, vs).then(function(newVal) {
+        editDialog('Edit IDB Item', k, vs).then(function(newVal) {
           if (newVal === null) return;
           var parsed;
           try { parsed = JSON.parse(newVal); } catch(err) { parsed = newVal; }
-          var wr = idbTx('readwrite');
-          if (!wr) return;
-          wr.put(parsed, k).onsuccess = function() {
-            log('IDB edited: ' + k, 'ok');
+          idbTx('readwrite').put(parsed, k).onsuccess = function() {
+            log('IDB edited: ' + k, 'ok', 'New value: ' + newVal.slice(0,80));
             toast('IDB updated', '✅');
             idbRefresh();
+          };
+        });
+      };
+    }
+    function idbRenameItem(k) {
+      var store = idbTx('readonly');
+      if (!store) return;
+      store.get(k).onsuccess = function(e) {
+        var v = e.target.result;
+        renameDialog('Rename IDB Key', k).then(function(newKey) {
+          if (!newKey || newKey === k) return;
+          var wr = idbTx('readwrite');
+          if (!wr) return;
+          wr.put(v, newKey).onsuccess = function() {
+            idbTx('readwrite').delete(k).onsuccess = function() {
+              log('IDB renamed: "' + k + '" → "' + newKey + '"', 'ok', 'Store: ' + idbStoreName);
+              toast('Renamed', '🏷️');
+              idbRefresh();
+            };
           };
         });
       };
@@ -1873,66 +2630,76 @@
         var v = e.target.result;
         var vs = typeof v === 'object' ? JSON.stringify(v) : String(v);
         navigator.clipboard.writeText(vs).then(function() {
-          toast('Copied: ' + k, '📋');
-          log('IDB copied: ' + k, 'info');
+          toast('Copied!', '📋');
+          log('IDB copied: ' + k, 'info', 'Value: ' + vs.slice(0,80));
         });
       };
     }
     function idbDeleteItem(k) {
       confirmDialog('Delete IDB item', 'Delete "' + k + '"?').then(function(ok) {
         if (!ok) return;
-        var store = idbTx('readwrite');
-        if (!store) return;
-        store.delete(k).onsuccess = function() {
-          log('IDB deleted: ' + k, 'ok');
-          toast('IDB item deleted', '🗑️');
+        idbTx('readwrite').delete(k).onsuccess = function() {
+          log('IDB deleted: ' + k, 'ok', 'Store: ' + idbStoreName);
+          toast('Deleted', '🗑️');
           idbRefresh();
         };
       });
     }
-    function exportAll() {
-      var skip = { 'sm-theme': 1, 'sm-tab': 1, 'sm-views': 1 };
-      var lsData = {};
-      Object.keys(localStorage).forEach(function(k) {
-        if (!skip[k]) lsData[k] = localStorage.getItem(k);
+    function idbExportSelected() {
+      var checked = Array.from(document.querySelectorAll('.idb-row-check:checked')).map(function(c) { return c.value; });
+      idbGetAll(function(items) {
+        var filtered = checked.length ? items.filter(function(it) { return checked.indexOf(String(it.key)) !== -1; }) : items;
+        var obj = {};
+        filtered.forEach(function(it) { obj[it.key] = it.val; });
+        downloadJson({ type: 'indexedDB', database: idbDbName, store: idbStoreName, data: obj, exported: new Date().toISOString() }, 'idb-export-' + Date.now() + '.json');
+        log('Exported IDB store', 'ok', filtered.length + ' items from ' + idbStoreName);
+        toast('Exported ' + filtered.length + ' items', '⬆️');
       });
-      var cookieData = parseCookies();
+    }
+    function idbTriggerImport() { document.getElementById('idbImportFile').click(); }
+    function idbImport(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      readJson(file, function(data) {
+        var obj = data.data || data;
+        var store = idbTx('readwrite');
+        if (!store) return;
+        var count = 0;
+        Object.keys(obj).forEach(function(k) { store.put(obj[k], k); count++; });
+        log('Imported into IDB', 'ok', count + ' items from ' + file.name + ' into ' + idbStoreName);
+        toast('Imported ' + count + ' items', '⬇️');
+        setTimeout(idbRefresh, 150);
+      });
+      e.target.value = '';
+    }
+    // ── Global Export / Import ────────────────────────────────────────────
+    function exportAll() {
+      var lsData = {};
+      lsAllKeys().forEach(function(k) { lsData[k] = localStorage.getItem(k); });
       idbGetAll(function(items) {
         var idbData = {};
         items.forEach(function(it) { idbData[it.key] = it.val; });
         var payload = {
           exported: new Date().toISOString(),
+          version: 1,
           localStorage: lsData,
-          cookies: cookieData,
+          cookies: parseCookies(),
           indexedDB: { database: idbDbName, store: idbStoreName, data: idbData }
         };
-        var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'storage-export-' + Date.now() + '.json';
-        a.click();
-        URL.revokeObjectURL(a.href);
-        log('Exported all storage data', 'ok');
-        toast('Exported!', '⬆️');
+        downloadJson(payload, 'storage-all-export-' + Date.now() + '.json');
+        log('Exported all storage', 'ok', 'LS: ' + Object.keys(lsData).length + ' | Cookies: ' + Object.keys(parseCookies()).length + ' | IDB: ' + items.length);
+        toast('All storage exported!', '⬆️');
       });
     }
-    function triggerImport() {
-      document.getElementById('importFile').click();
-    }
+    function triggerImport() { document.getElementById('importFile').click(); }
     function importAll(e) {
       var file = e.target.files[0];
       if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function(ev) {
-        var data;
-        try { data = JSON.parse(ev.target.result); } catch(err) { log('Import: invalid JSON', 'err'); return; }
-        var lsCount = 0;
-        var ckCount = 0;
-        var idbCount = 0;
+      readJson(file, function(data) {
+        var lsCount = 0, ckCount = 0, idbCount = 0;
         if (data.localStorage) {
           Object.keys(data.localStorage).forEach(function(k) {
-            localStorage.setItem(k, data.localStorage[k]);
-            lsCount++;
+            if (!LS_ALWAYS_SKIP[k] && !LS_SYS_KEYS[k]) { localStorage.setItem(k, data.localStorage[k]); lsCount++; }
           });
         }
         if (data.cookies) {
@@ -1942,21 +2709,32 @@
           });
         }
         if (data.indexedDB && data.indexedDB.data && idbDb) {
-          var entries = data.indexedDB.data;
           var store = idbTx('readwrite');
           if (store) {
-            Object.keys(entries).forEach(function(k) {
-              store.put(entries[k], k);
-              idbCount++;
-            });
+            Object.keys(data.indexedDB.data).forEach(function(k) { store.put(data.indexedDB.data[k], k); idbCount++; });
           }
         }
-        log('Imported: LS=' + lsCount + ', Cookies=' + ckCount + ', IDB=' + idbCount, 'ok');
+        log('Imported all storage', 'ok', 'LS: ' + lsCount + ' | Cookies: ' + ckCount + ' | IDB: ' + idbCount + ' | File: ' + file.name);
         toast('Imported successfully!', '⬇️');
         lsRefresh(); ckRefresh(); idbRefresh();
+      });
+      e.target.value = '';
+    }
+    function downloadJson(obj, filename) {
+      var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function readJson(file, cb) {
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        try { cb(JSON.parse(ev.target.result)); }
+        catch(err) { log('Invalid JSON file', 'err', err.message + ' | File: ' + file.name); toast('Invalid JSON!', '❌'); }
       };
       reader.readAsText(file);
-      e.target.value = '';
     }
   </script>
 </body>
