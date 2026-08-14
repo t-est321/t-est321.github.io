@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR/Barcode Scanner Pro (DEMO Version)</title>
+  <title>QR/Barcode Scanner Pro</title>
   <script>
   var _jsQRLoaded=false,_zxingLoaded=false;
   function loadScript(urls,name,onDone,integrity){
@@ -15,7 +15,8 @@
       }
       const url=urls[idx++];
       const s=document.createElement('script');
-      s.src=url;
+      const cacheBuster=(typeof chkDisableCacheLibs!=='undefined'&&chkDisableCacheLibs.checked)?('?t='+Date.now()):'';
+      s.src=url+cacheBuster;
       s.crossOrigin='anonymous';
       if(idx===1&&integrity){
         s.integrity=integrity;
@@ -415,6 +416,9 @@
         grid-row: 4;
       }
     }
+    body.no-shadows *{box-shadow:none !important}
+    body.no-animations *{transition:none !important;animation:none !important}
+    body.no-blur *{filter:none !important;backdrop-filter:none !important}
   </style>
 </head>
 <body>
@@ -422,6 +426,7 @@
   <div class="container">
     <div class="video-wrap" id="videoWrap">
       <video id="vid" playsinline></video>
+      <canvas id="overlayCvs" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;"></canvas>
       <div class="overlay"><div class="scan-region">
         <div class="corner tl"></div><div class="corner tr"></div>
         <div class="corner bl"></div><div class="corner br"></div>
@@ -446,61 +451,91 @@
         <label class="toggle-wrap r"><input type="checkbox" id="chkPreventDup"><div class="toggle-track"></div><span class="toggle-label">No Dups<span class="tl-desc">Avoid scanning duplicates</span></span></label>
         <label class="toggle-wrap y"><input type="checkbox" id="chkRangeScan"><div class="toggle-track"></div><span class="toggle-label">Range<span class="tl-desc">Restrict scanning boundaries</span></span></label>
         <label class="toggle-wrap m"><input type="checkbox" id="chkUltra"><div class="toggle-track"></div><span class="toggle-label">Ultra<span class="tl-desc">High-precision scanner mode</span></span></label>
+        <label class="toggle-wrap o"><input type="checkbox" id="chkRawOnly"><div class="toggle-track"></div><span class="toggle-label">Raw only<span class="tl-desc">Display pure raw codewords</span></span></label>
       </div>
       <div class="opts-extra" id="optsExtra" style="display:none">
         <div class="opts-section">
-          <div class="opts-section-title">📷 QR/Barcode Scan Options</div>
-          <label class="toggle-wrap p"><input type="checkbox" id="chkAutoOpen"><div class="toggle-track"></div><span class="toggle-label">Auto-Open<span class="tl-desc">Open URLs automatically</span></span></label>
-          <label class="toggle-wrap c"><input type="checkbox" id="chkAutoCopy"><div class="toggle-track"></div><span class="toggle-label">Auto-Copy<span class="tl-desc">Copy result to clipboard</span></span></label>
-          <label class="toggle-wrap r"><input type="checkbox" id="chkSound"><div class="toggle-track"></div><span class="toggle-label">Sound<span class="tl-desc">Beep on scan</span></span></label>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkVibrate" checked><div class="toggle-track"></div><span class="toggle-label">Vibrate<span class="tl-desc">Haptic feedback</span></span></label>
-          <label class="toggle-wrap o"><input type="checkbox" id="chkShowRaw"><div class="toggle-track"></div><span class="toggle-label">Raw<span class="tl-desc">Show raw codewords</span></span></label>
-          <label class="toggle-wrap p"><input type="checkbox" id="chkShowGrid"><div class="toggle-track"></div><span class="toggle-label">Grid<span class="tl-desc">Visualize QR/Barcode grid</span></span></label>
-          <label class="toggle-wrap c"><input type="checkbox" id="chkDeepAnalysis" checked><div class="toggle-track"></div><span class="toggle-label">Deep<span class="tl-desc">Extended error analysis</span></span></label>
-          <label class="toggle-wrap r"><input type="checkbox" id="chkInvertScan"><div class="toggle-track"></div><span class="toggle-label">Invert<span class="tl-desc">Scan inverted QR codes</span></span></label>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkContinuous"><div class="toggle-track"></div><span class="toggle-label">Continuous<span class="tl-desc">Keep scanning after detect</span></span></label>
-          <label class="toggle-wrap o"><input type="checkbox" id="chkTimestamp" checked><div class="toggle-track"></div><span class="toggle-label">Timestamp<span class="tl-desc">Show time in history</span></span></label>
-          <label class="toggle-wrap p"><input type="checkbox" id="chkShowPxDamaged"><div class="toggle-track"></div><span class="toggle-label">PxDamaged<span class="tl-desc">Show damaged pixels detail</span></span></label>
-          <label class="toggle-wrap m"><input type="checkbox" id="chkMirrorScan"><div class="toggle-track"></div><span class="toggle-label">Mirror<span class="tl-desc">Scan mirror-reversed codes</span></span></label>
-          <label class="toggle-wrap y"><input type="checkbox" id="chkLowLight"><div class="toggle-track"></div><span class="toggle-label">Torch<span class="tl-desc">Camera flashlight</span></span></label>
-          <label class="toggle-wrap c"><input type="checkbox" id="chkAutoZoom"><div class="toggle-track"></div><span class="toggle-label">Auto-Zoom<span class="tl-desc">Zoom on far barcodes</span></span></label>
-          <label class="toggle-wrap r"><input type="checkbox" id="chkHighPerformance"><div class="toggle-track"></div><span class="toggle-label">Eco Mode<span class="tl-desc">Throttle FPS to save battery</span></span></label>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkStrictQuietZone"><div class="toggle-track"></div><span class="toggle-label">Strict QZ<span class="tl-desc">Enforce standard quiet zone</span></span></label>
+          <div class="opts-section-title" id="headScanOpts" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>📷 QR/Barcode Scan Options</span><span class="fold-arrow" id="arrowScanOpts">▼</span></div>
+          <div id="bodyScanOpts" style="display:block; flex-direction:column; gap:0.2rem;">
+            <label class="toggle-wrap p"><input type="checkbox" id="chkAutoOpen"><div class="toggle-track"></div><span class="toggle-label">Auto-Open<span class="tl-desc">Open URLs automatically</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkAutoCopy"><div class="toggle-track"></div><span class="toggle-label">Auto-Copy<span class="tl-desc">Copy result to clipboard</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkSound"><div class="toggle-track"></div><span class="toggle-label">Sound<span class="tl-desc">Beep on scan</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkVibrate" checked><div class="toggle-track"></div><span class="toggle-label">Vibrate<span class="tl-desc">Haptic feedback</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkShowRaw"><div class="toggle-track"></div><span class="toggle-label">Raw<span class="tl-desc">Show raw codewords</span></span></label>
+            <label class="toggle-wrap p"><input type="checkbox" id="chkShowGrid"><div class="toggle-track"></div><span class="toggle-label">Grid<span class="tl-desc">Visualize QR/Barcode grid</span></span></label>
+            <label class="toggle-wrap p"><input type="checkbox" id="chkShowPxDamageOverlay"><div class="toggle-track"></div><span class="toggle-label">Damage Overlay<span class="tl-desc">Show pixel damage as green/yellow/red overlay</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkCompress2x"><div class="toggle-track"></div><span class="toggle-label">Compress 2x<span class="tl-desc">Downscale image 2x before scan</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkDeepAnalysis" checked><div class="toggle-track"></div><span class="toggle-label">Deep<span class="tl-desc">Extended error analysis</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkInvertScan"><div class="toggle-track"></div><span class="toggle-label">Invert<span class="tl-desc">Scan inverted QR codes</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkContinuous"><div class="toggle-track"></div><span class="toggle-label">Continuous<span class="tl-desc">Keep scanning after detect</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkTimestamp" checked><div class="toggle-track"></div><span class="toggle-label">Timestamp<span class="tl-desc">Show time in history</span></span></label>
+            <label class="toggle-wrap p"><input type="checkbox" id="chkShowPxDamaged"><div class="toggle-track"></div><span class="toggle-label">PxDamaged<span class="tl-desc">Show damaged pixels detail</span></span></label>
+            <label class="toggle-wrap m"><input type="checkbox" id="chkMirrorScan"><div class="toggle-track"></div><span class="toggle-label">Mirror<span class="tl-desc">Scan mirror-reversed codes</span></span></label>
+            <label class="toggle-wrap y"><input type="checkbox" id="chkLowLight"><div class="toggle-track"></div><span class="toggle-label">Torch<span class="tl-desc">Camera flashlight</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkAutoZoom"><div class="toggle-track"></div><span class="toggle-label">Auto-Zoom<span class="tl-desc">Zoom on far barcodes</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkHighPerformance"><div class="toggle-track"></div><span class="toggle-label">Eco Mode<span class="tl-desc">Throttle FPS to save battery</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkStrictQuietZone"><div class="toggle-track"></div><span class="toggle-label">Strict QZ<span class="tl-desc">Enforce standard quiet zone</span></span></label>
+          </div>
         </div>
         <div class="opts-section">
-          <div class="opts-section-title">🔬 QR/Barcode Scan Enhancement (15 algorithms)</div>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkGrayscale" checked><div class="toggle-track"></div><span class="toggle-label">Grayscale<span class="tl-desc">Standard grayscale binarization</span></span></label>
-          <label class="toggle-wrap o"><input type="checkbox" id="chkGlobalThresh"><div class="toggle-track"></div><span class="toggle-label">GlobalThresh<span class="tl-desc">Global threshold scan</span></span></label>
-          <label class="toggle-wrap p"><input type="checkbox" id="chkOtsu"><div class="toggle-track"></div><span class="toggle-label">Otsu<span class="tl-desc">Otsu binarization</span></span></label>
-          <label class="toggle-wrap c"><input type="checkbox" id="chkNiblack"><div class="toggle-track"></div><span class="toggle-label">Niblack<span class="tl-desc">Niblack local threshold</span></span></label>
-          <label class="toggle-wrap r"><input type="checkbox" id="chkSauvola"><div class="toggle-track"></div><span class="toggle-label">Sauvola<span class="tl-desc">Sauvola adaptive threshold</span></span></label>
-          <label class="toggle-wrap y"><input type="checkbox" id="chkMorpho"><div class="toggle-track"></div><span class="toggle-label">Morpho<span class="tl-desc">Morphological enhancement</span></span></label>
-          <label class="toggle-wrap m"><input type="checkbox" id="chkSharpening"><div class="toggle-track"></div><span class="toggle-label">Sharpen<span class="tl-desc">Image sharpening filter</span></span></label>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkHistEq"><div class="toggle-track"></div><span class="toggle-label">HistEq<span class="tl-desc">Histogram equalization</span></span></label>
-          <label class="toggle-wrap o"><input type="checkbox" id="chkGamma"><div class="toggle-track"></div><span class="toggle-label">Gamma<span class="tl-desc">Gamma correction scan</span></span></label>
-          <label class="toggle-wrap m"><input type="checkbox" id="chkAdaptiveGauss"><div class="toggle-track"></div><span class="toggle-label">AdaptiveGauss<span class="tl-desc">Gaussian adaptive threshold</span></span></label>
-          <label class="toggle-wrap c"><input type="checkbox" id="chkSobelFilter"><div class="toggle-track"></div><span class="toggle-label">Sobel Edge<span class="tl-desc">Sobel edge binarization</span></span></label>
-          <label class="toggle-wrap y"><input type="checkbox" id="chkMedianFilter"><div class="toggle-track"></div><span class="toggle-label">Median Noise<span class="tl-desc">Median filter denoising</span></span></label>
-          <label class="toggle-wrap r"><input type="checkbox" id="chkClahe"><div class="toggle-track"></div><span class="toggle-label">CLAHE<span class="tl-desc">Local contrast equalization</span></span></label>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkErosion"><div class="toggle-track"></div><span class="toggle-label">Erosion<span class="tl-desc">Erosion morphological filter</span></span></label>
-          <label class="toggle-wrap o"><input type="checkbox" id="chkDilation"><div class="toggle-track"></div><span class="toggle-label">Dilation<span class="tl-desc">Dilation morphological filter</span></span></label>
+          <div class="opts-section-title" id="headDangerZone" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>⚡ Optimisation & Danger Zone</span><span class="fold-arrow" id="arrowDangerZone">▼</span></div>
+          <div id="bodyDangerZone" style="display:block; flex-direction:column; gap:0.2rem;">
+            <label class="toggle-wrap r"><input type="checkbox" id="chkDisableBlur"><div class="toggle-track"></div><span class="toggle-label">Disable Blur<span class="tl-desc">Turn off blur filters to speed up processing</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkDisableProgress"><div class="toggle-track"></div><span class="toggle-label">Disable Progress<span class="tl-desc">Disable scan progress bar calculation</span></span></label>
+            <label class="toggle-wrap y"><input type="checkbox" id="chkDisableMultiThreshold"><div class="toggle-track"></div><span class="toggle-label">Disable Multi-Threshold<span class="tl-desc">Bypass multi-threshold scanning to read single-frame contrast only</span></span></label>
+            <label class="toggle-wrap m"><input type="checkbox" id="chkDisableAnimations"><div class="toggle-track"></div><span class="toggle-label">Disable Animations<span class="tl-desc">Disable transitions and motion graphics</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkDisableShadows"><div class="toggle-track"></div><span class="toggle-label">Disable Shadows<span class="tl-desc">Turn off box-shadows globally</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkDisableCamera"><div class="toggle-track"></div><span class="toggle-label">Disable Camera<span class="tl-desc">Freeze and stop the camera feed loop</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkDisableIndexedDB"><div class="toggle-track"></div><span class="toggle-label">Disable IndexedDB<span class="tl-desc">Bypass DB, keep history in RAM session</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkDisableCacheLibs"><div class="toggle-track"></div><span class="toggle-label">Disable Cache Libs<span class="tl-desc">Bypass browser cache for CDN scripts</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkDisableSound"><div class="toggle-track"></div><span class="toggle-label">Disable Sound<span class="tl-desc">Disable all audio beeps and success tones</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkDisableVibration"><div class="toggle-track"></div><span class="toggle-label">Disable Vibration<span class="tl-desc">Disable device haptic tactile feedback</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkDisableAdvancedFilters"><div class="toggle-track"></div><span class="toggle-label">Disable Filters<span class="tl-desc">Disable 20 binarization filters, run Grayscale only</span></span></label>
+            <label class="toggle-wrap p"><input type="checkbox" id="chkDisableLogging"><div class="toggle-track"></div><span class="toggle-label">Disable Logging<span class="tl-desc">Bypass real-time system log collection to save memory</span></span></label>
+          </div>
         </div>
         <div class="opts-section">
-          <div class="opts-section-title">📦 Barcode Format Support</div>
-          <label class="toggle-wrap p"><input type="checkbox" id="chkScanQR" checked><div class="toggle-track"></div><span class="toggle-label">QR/Barcode<span class="tl-desc">Standard QR code</span></span></label>
-          <label class="toggle-wrap c"><input type="checkbox" id="chkScanMicroQR"><div class="toggle-track"></div><span class="toggle-label">Micro QR/Barcode<span class="tl-desc">Micro QR/Barcode (M1-M4)</span></span></label>
-          <label class="toggle-wrap r"><input type="checkbox" id="chkScanDataMatrix"><div class="toggle-track"></div><span class="toggle-label">Data Matrix<span class="tl-desc">ISO/IEC 16022</span></span></label>
-          <label class="toggle-wrap y"><input type="checkbox" id="chkScanAztec"><div class="toggle-track"></div><span class="toggle-label">Aztec<span class="tl-desc">ISO/IEC 24778</span></span></label>
-          <label class="toggle-wrap m"><input type="checkbox" id="chkScanPDF417"><div class="toggle-track"></div><span class="toggle-label">PDF417<span class="tl-desc">2D stacked barcode</span></span></label>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkScanCode128"><div class="toggle-track"></div><span class="toggle-label">Code 128<span class="tl-desc">Standard 1D barcode</span></span></label>
-          <label class="toggle-wrap o"><input type="checkbox" id="chkScanCode39"><div class="toggle-track"></div><span class="toggle-label">Code 39<span class="tl-desc">Alphanumeric 1D barcode</span></span></label>
-          <label class="toggle-wrap p"><input type="checkbox" id="chkScanEan13"><div class="toggle-track"></div><span class="toggle-label">EAN-13<span class="tl-desc">European article number</span></span></label>
-          <label class="toggle-wrap c"><input type="checkbox" id="chkScanUpcA"><div class="toggle-track"></div><span class="toggle-label">UPC-A<span class="tl-desc">Universal product code</span></span></label>
-          <label class="toggle-wrap r"><input type="checkbox" id="chkScanItf"><div class="toggle-track"></div><span class="toggle-label">ITF<span class="tl-desc">Interleaved 2 of 5</span></span></label>
-          <label class="toggle-wrap g"><input type="checkbox" id="chkUseLibs"><div class="toggle-track"></div><span class="toggle-label">Use Libs<span class="tl-desc">Enable external scan libraries</span></span></label>
+          <div class="opts-section-title" id="headEnhancements" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>🔬 QR/Barcode Scan Enhancement</span><span class="fold-arrow" id="arrowEnhancements">▼</span></div>
+          <div id="bodyEnhancements" style="display:block; flex-direction:column; gap:0.2rem;">
+            <label class="toggle-wrap g"><input type="checkbox" id="chkGrayscale" checked><div class="toggle-track"></div><span class="toggle-label">Grayscale<span class="tl-desc">Standard grayscale binarization</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkGlobalThresh"><div class="toggle-track"></div><span class="toggle-label">GlobalThresh<span class="tl-desc">Global threshold scan</span></span></label>
+            <label class="toggle-wrap p"><input type="checkbox" id="chkOtsu"><div class="toggle-track"></div><span class="toggle-label">Otsu<span class="tl-desc">Otsu binarization</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkNiblack"><div class="toggle-track"></div><span class="toggle-label">Niblack<span class="tl-desc">Niblack local threshold</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkSauvola"><div class="toggle-track"></div><span class="toggle-label">Sauvola<span class="tl-desc">Sauvola adaptive threshold</span></span></label>
+            <label class="toggle-wrap y"><input type="checkbox" id="chkMorpho"><div class="toggle-track"></div><span class="toggle-label">Morpho<span class="tl-desc">Morphological enhancement</span></span></label>
+            <label class="toggle-wrap m"><input type="checkbox" id="chkSharpening"><div class="toggle-track"></div><span class="toggle-label">Sharpen<span class="tl-desc">Image sharpening filter</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkHistEq"><div class="toggle-track"></div><span class="toggle-label">HistEq<span class="tl-desc">Histogram equalization</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkGamma"><div class="toggle-track"></div><span class="toggle-label">Gamma<span class="tl-desc">Gamma correction scan</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkSauvolaNiblack"><div class="toggle-track"></div><span class="toggle-label">SauvolaNiblack<span class="tl-desc">Sauvola-Niblack hybrid filter</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkBernsen"><div class="toggle-track"></div><span class="toggle-label">Bernsen<span class="tl-desc">Bernsen dynamic local threshold</span></span></label>
+            <label class="toggle-wrap p"><input type="checkbox" id="chkBockKozic"><div class="toggle-track"></div><span class="toggle-label">BockKozic<span class="tl-desc">Edge-preserving binarization</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkRidge"><div class="toggle-track"></div><span class="toggle-label">RidgeDetect<span class="tl-desc">Hessian gradient ridge detection</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkClaheGrayscale"><div class="toggle-track"></div><span class="toggle-label">CLAHE-Adaptive<span class="tl-desc">CLAHE-grayscale hybrid filter</span></span></label>
+            <label class="toggle-wrap m"><input type="checkbox" id="chkAdaptiveGauss"><div class="toggle-track"></div><span class="toggle-label">AdaptiveGauss<span class="tl-desc">Gaussian adaptive threshold</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkSobelFilter"><div class="toggle-track"></div><span class="toggle-label">Sobel Edge<span class="tl-desc">Sobel edge binarization</span></span></label>
+            <label class="toggle-wrap y"><input type="checkbox" id="chkMedianFilter"><div class="toggle-track"></div><span class="toggle-label">Median Noise<span class="tl-desc">Median filter denoising</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkClahe"><div class="toggle-track"></div><span class="toggle-label">CLAHE<span class="tl-desc">Local contrast equalization</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkErosion"><div class="toggle-track"></div><span class="toggle-label">Erosion<span class="tl-desc">Erosion morphological filter</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkDilation"><div class="toggle-track"></div><span class="toggle-label">Dilation<span class="tl-desc">Dilation morphological filter</span></span></label>
+          </div>
         </div>
-      </div>
-    </div>
+        <div class="opts-section">
+          <div class="opts-section-title" id="headFormats" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>📦 Barcode Format Support</span><span class="fold-arrow" id="arrowFormats">▼</span></div>
+          <div id="bodyFormats" style="display:block; flex-direction:column; gap:0.2rem;">
+            <label class="toggle-wrap p"><input type="checkbox" id="chkScanQR" checked><div class="toggle-track"></div><span class="toggle-label">QR/Barcode<span class="tl-desc">Standard QR code</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkScanMicroQR"><div class="toggle-track"></div><span class="toggle-label">Micro QR/Barcode<span class="tl-desc">Micro QR/Barcode (M1-M4)</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkScanDataMatrix"><div class="toggle-track"></div><span class="toggle-label">Data Matrix<span class="tl-desc">ISO/IEC 16022</span></span></label>
+            <label class="toggle-wrap y"><input type="checkbox" id="chkScanAztec"><div class="toggle-track"></div><span class="toggle-label">Aztec<span class="tl-desc">ISO/IEC 24778</span></span></label>
+            <label class="toggle-wrap m"><input type="checkbox" id="chkScanPDF417"><div class="toggle-track"></div><span class="toggle-label">PDF417<span class="tl-desc">2D stacked barcode</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkScanCode128"><div class="toggle-track"></div><span class="toggle-label">Code 128<span class="tl-desc">Standard 1D barcode</span></span></label>
+            <label class="toggle-wrap o"><input type="checkbox" id="chkScanCode39"><div class="toggle-track"></div><span class="toggle-label">Code 39<span class="tl-desc">Alphanumeric 1D barcode</span></span></label>
+            <label class="toggle-wrap p"><input type="checkbox" id="chkScanEan13"><div class="toggle-track"></div><span class="toggle-label">EAN-13<span class="tl-desc">European article number</span></span></label>
+            <label class="toggle-wrap c"><input type="checkbox" id="chkScanUpcA"><div class="toggle-track"></div><span class="toggle-label">UPC-A<span class="tl-desc">Universal product code</span></span></label>
+            <label class="toggle-wrap r"><input type="checkbox" id="chkScanItf"><div class="toggle-track"></div><span class="toggle-label">ITF<span class="tl-desc">Interleaved 2 of 5</span></span></label>
+            <label class="toggle-wrap g"><input type="checkbox" id="chkUseLibs"><div class="toggle-track"></div><span class="toggle-label">Use Libs<span class="tl-desc">Enable external scan libraries</span></span></label>
+          </div>
+        </div>
+      </div>    </div>
     <div class="credits">Authors: t-est321 (PewPew Live, GitHub), AI</div>
     <div class="controls">
       <button class="btn btn-start" id="btnStart">▶ Start</button>
@@ -578,8 +613,6 @@
       </div>
       <div style="margin-top:0.5rem;display:flex;gap:0.3rem;flex-wrap:wrap">
         <button class="btn btn-sm btn-export" id="btnResetSettings">🔄 Reset</button>
-        <button class="btn btn-sm btn-json" id="btnExportSettings">📤 Export</button>
-        <button class="btn btn-sm btn-import" id="btnImportSettings">📥 Import</button>
       </div>
     </div>
     <div class="options-row" id="logPanel" style="margin-top:0.5rem">
@@ -593,6 +626,7 @@
     <input type="file" id="inpFile" accept="image/*">
     <input type="file" id="inpImport" accept=".csv,.json" style="display:none">
     <input type="file" id="inpImportSettings" accept=".json" style="display:none">
+  <input type="file" id="inpImportQRSP" accept=".qrsp" style="display:none">
     <div class="result-box" id="resBox">
       <h3><span>Result</span><span class="badge" id="resBadge"></span><button class="btn btn-sm btn-del-sm" id="hdrClearBtn" style="margin-left:auto;background:linear-gradient(135deg,#ff416c,#ff4b2b);color:#fff;font-size:0.65rem;padding:0.25rem 0.5rem;display:inline-block;flex:none;width:auto;min-width:auto;">🗑 Clear</button></h3>
       <div class="result-data" id="resData"></div>
@@ -618,7 +652,6 @@
       <div class="hh">
         <h3>History (<span id="hCnt">0</span>)</h3>
         <div class="hbs">
-          <button class="btn btn-export btn-sm" id="btnExport">📤CSV</button>
           <button class="btn btn-import btn-sm" id="btnImport">📥Import</button>
           <button class="btn btn-hide btn-sm" id="btnHide">👁Hide</button>
           <button class="btn btn-clear btn-sm" id="btnClear">🗑Clear</button>
@@ -640,7 +673,19 @@
   const btnStart=$('btnStart'),btnStop=$('btnStop'),btnFile=$('btnFile');
   const inpFile=$('inpFile'),inpImport=$('inpImport');
   const inpImportSettings=$('inpImportSettings');
-  const btnClear=$('btnClear'),btnExport=$('btnExport'),btnImport=$('btnImport');
+  const inpImportQRSP=$('inpImportQRSP');
+  const chkShowPxDamageOverlay=$('chkShowPxDamageOverlay');
+  const chkCompress2x=$('chkCompress2x');
+    const chkRawOnly=$('chkRawOnly');
+  const chkDisableBlur=$('chkDisableBlur'),chkDisableProgress=$('chkDisableProgress'),chkDisableMultiThreshold=$('chkDisableMultiThreshold'),chkDisableAnimations=$('chkDisableAnimations'),chkDisableShadows=$('chkDisableShadows'),chkDisableCamera=$('chkDisableCamera'),chkDisableIndexedDB=$('chkDisableIndexedDB');
+  const chkDisableSound=$('chkDisableSound'),chkDisableVibration=$('chkDisableVibration'),chkDisableAdvancedFilters=$('chkDisableAdvancedFilters'),chkDisableLogging=$('chkDisableLogging');
+  const chkBockKozic=$('chkBockKozic');
+  const chkSauvolaNiblack=$('chkSauvolaNiblack');
+  const chkBernsen=$('chkBernsen');
+  const chkRidge=$('chkRidge');
+  const chkClaheGrayscale=$('chkClaheGrayscale');
+  const overlayCvs=$('overlayCvs'),overlayCx=overlayCvs.getContext('2d');
+  const btnClear=$('btnClear'),btnExport=null,btnImport=$('btnImport');
   const btnHide=$('btnHide'),btnShow=$('btnShow');
   const btnSettings=$('btnSettings'),settingsPanel=$('settingsPanel');
   const chkS=$('chkStrict'),chkM=$('chkMulti'),chkE=$('chkEnhanced');
@@ -664,6 +709,7 @@
   const scanProgressBox=$('scanProgressBox'),lblProgressAlgo=$('lblProgressAlgo'),scanProgressFill=$('scanProgressFill'),lblProgressPct=$('lblProgressPct');
   let logOpen=false;
   function addLog(msg, type='info'){
+    if(chkDisableLogging.checked)return;
     const time = new Date().toLocaleTimeString();
     const color = type==='error'||type==='js-error'?'#ff4d4d':type==='warning'?'#ffcc00':'#38ef7d';
     const div = document.createElement('div');
@@ -737,7 +783,7 @@
     scanQR:true,scanMicroQR:false,scanDataMatrix:true,
     scanAztec:false,scanPDF417:false,useLibs:true,
     camFacing:'environment',camRes:'1280',scanDelay:4000,
-    binBlock:'8',maxHist:500,theme:'dark',optsOpen:false,
+    binBlock:'8',maxHist:500,theme:'dark',optsOpen:false,showPxDamageOverlay:false,compress2x:false,rawOnly:false,hHidden:false,disableBlur:false,disableProgress:false,disableMultiThreshold:false,disableAnimations:false,disableShadows:false,disableCamera:false,disableIndexedDB:false,disableCacheLibs:false,collapseScanOpts:false,collapseDangerZone:false,collapseEnhancements:false,disableSound:false,disableVibration:false,disableAdvancedFilters:false,disableLogging:false,sauvolaNiblack:false,bernsen:false,bockKozic:false,ridge:false,claheGrayscale:false,
     batch:false,preventDup:false,rangeScan:false,
     mirrorScan:false,lowLight:false,autoZoom:false,highPerformance:false,strictQuietZone:false,
     adaptiveGauss:false,sobelFilter:false,medianFilter:false,clahe:false,erosion:false,dilation:false,
@@ -879,6 +925,27 @@
       scanDelay:parseInt(setScanDelay.value)||4000,
       binBlock:setBinBlock.value,maxHist:parseInt(setMaxHist.value)||500,
       theme:setTheme.value,optsOpen,
+      showPxDamageOverlay:chkShowPxDamageOverlay.checked,
+      compress2x:chkCompress2x.checked,
+      rawOnly:chkRawOnly.checked,
+      hHidden:hHidden,
+      disableBlur:chkDisableBlur.checked,
+      disableProgress:chkDisableProgress.checked,
+      disableMultiThreshold:chkDisableMultiThreshold.checked,
+      disableAnimations:chkDisableAnimations.checked,
+      disableShadows:chkDisableShadows.checked,
+      disableCamera:chkDisableCamera.checked,
+      disableIndexedDB:chkDisableIndexedDB.checked,
+      disableCacheLibs:chkDisableCacheLibs.checked,collapseScanOpts:window._collapseScanOpts||false,collapseDangerZone:window._collapseDangerZone||false,collapseEnhancements:window._collapseEnhancements||false,collapseFormats:window._collapseFormats||false,
+      disableSound:chkDisableSound.checked,
+      disableVibration:chkDisableVibration.checked,
+      disableAdvancedFilters:chkDisableAdvancedFilters.checked,
+      disableLogging:chkDisableLogging.checked,
+      sauvolaNiblack:chkSauvolaNiblack.checked,
+      bernsen:chkBernsen.checked,
+      bockKozic:chkBockKozic.checked,
+      ridge:chkRidge.checked,
+      claheGrayscale:chkClaheGrayscale.checked,
     lang:setLang.value||'en'
     };
     if(_lastSavedSettings&&Object.keys(s).every(k=>s[k]===_lastSavedSettings[k]))return;
@@ -887,68 +954,99 @@
   }
   function applySettings(s){
     if(!s)return;
+    const getS = (key, def) => {
+      if (s[key] === undefined) {
+        if (typeof def === 'number') return 0;
+        return false;
+      }
+      return s[key];
+    };
     _lastSavedSettings={...s};
-    chkS.checked=!!s.strict;
-    chkM.checked=!!s.multi;
-    chkE.checked=!!s.enhanced;
-    chkAutoOpen.checked=!!s.autoOpen;
-    chkAutoCopy.checked=!!s.autoCopy;
-    chkSound.checked=!!s.sound;
-    chkVibrate.checked=s.vibrate!==false;
-    chkShowRaw.checked=!!s.showRaw;
-    chkShowGrid.checked=!!s.showGrid;
-    chkDeepAnalysis.checked=s.deepAnalysis!==false;
-    chkInvertScan.checked=!!s.invertScan;
-    chkContinuous.checked=!!s.continuous;
-    chkTimestamp.checked=s.timestamp!==false;
-    chkShowPxDamaged.checked=!!s.showPxDamaged;
-    chkGrayscale.checked=s.grayscale!==false;
-    chkGlobalThresh.checked=!!s.globalThresh;
-    chkOtsu.checked=!!s.otsu;
-    chkNiblack.checked=!!s.niblack;
-    chkSauvola.checked=!!s.sauvola;
-    chkMorpho.checked=!!s.morpho;
-    chkSharpening.checked=!!s.sharpening;
-    chkHistEq.checked=!!s.histEq;
-    chkGamma.checked=!!s.gamma;
-    chkScanQR.checked=s.scanQR!==false;
-    chkScanMicroQR.checked=!!s.scanMicroQR;
-    chkScanDataMatrix.checked=!!s.scanDataMatrix;
-    chkScanAztec.checked=!!s.scanAztec;
-    chkScanPDF417.checked=!!s.scanPDF417;
-    chkUseLibs.checked=!!s.useLibs;
-    chkBatch.checked=!!s.batch;
-    chkPreventDup.checked=!!s.preventDup;
-    chkRangeScan.checked=!!s.rangeScan;
-    chkMirrorScan.checked=!!s.mirrorScan;
-    chkLowLight.checked=!!s.lowLight;
-    chkAutoZoom.checked=!!s.autoZoom;
-    chkHighPerformance.checked=!!s.highPerformance;
-    chkStrictQuietZone.checked=!!s.strictQuietZone;
-    chkAdaptiveGauss.checked=!!s.adaptiveGauss;
-    chkSobelFilter.checked=!!s.sobelFilter;
-    chkMedianFilter.checked=!!s.medianFilter;
-    chkClahe.checked=!!s.clahe;
-    chkErosion.checked=!!s.erosion;
-    chkDilation.checked=!!s.dilation;
-    chkUltra.checked=!!s.ultra;
-    chkScanCode128.checked=!!s.scanCode128;
-    chkScanCode39.checked=!!s.scanCode39;
-    chkScanEan13.checked=!!s.scanEan13;
-    chkScanUpcA.checked=!!s.scanUpcA;
-    chkScanItf.checked=!!s.scanItf;
-    setBeepFreq.value=s.beepFreq||1200;
-    setBeepDur.value=s.beepDur||150;
-    setVibrateDur.value=s.vibrateDur||100;
-    setFps.value=s.fps||'30';
-    setDownscale.value=s.downscale||'1.0';
-    setCamFacing.value=s.camFacing||'environment';
-    setCamRes.value=s.camRes||'1280';
-    setScanDelay.value=s.scanDelay||4000;
-    setBinBlock.value=s.binBlock||'8';
-    setMaxHist.value=s.maxHist||500;
-    setTheme.value=s.theme||'dark';
-    setLang.value=s.lang||'en';
+    chkS.checked=!!getS('strict', false);
+    chkM.checked=!!getS('multi', false);
+    chkE.checked=!!getS('enhanced', false);
+    chkAutoOpen.checked=!!getS('autoOpen', false);
+    chkAutoCopy.checked=!!getS('autoCopy', false);
+    chkSound.checked=!!getS('sound', false);
+    chkVibrate.checked=!!getS('vibrate', true);
+    chkShowRaw.checked=!!getS('showRaw', false);
+    chkShowGrid.checked=!!getS('showGrid', false);
+    chkDeepAnalysis.checked=!!getS('deepAnalysis', true);
+    chkInvertScan.checked=!!getS('invertScan', false);
+    chkContinuous.checked=!!getS('continuous', false);
+    chkTimestamp.checked=!!getS('timestamp', true);
+    chkShowPxDamaged.checked=!!getS('showPxDamaged', false);
+    chkGrayscale.checked=!!getS('grayscale', true);
+    chkGlobalThresh.checked=!!getS('globalThresh', false);
+    chkOtsu.checked=!!getS('otsu', false);
+    chkNiblack.checked=!!getS('niblack', false);
+    chkSauvola.checked=!!getS('sauvola', false);
+    chkMorpho.checked=!!getS('morpho', false);
+    chkSharpening.checked=!!getS('sharpening', false);
+    chkHistEq.checked=!!getS('histEq', false);
+    chkGamma.checked=!!getS('gamma', false);
+    chkScanQR.checked=!!getS('scanQR', true);
+    chkScanMicroQR.checked=!!getS('scanMicroQR', false);
+    chkScanDataMatrix.checked=!!getS('scanDataMatrix', false);
+    chkScanAztec.checked=!!getS('scanAztec', false);
+    chkScanPDF417.checked=!!getS('scanPDF417', false);
+    chkUseLibs.checked=!!getS('useLibs', false);
+    chkBatch.checked=!!getS('batch', false);
+    chkPreventDup.checked=!!getS('preventDup', false);
+    chkRangeScan.checked=!!getS('rangeScan', false);
+    chkMirrorScan.checked=!!getS('mirrorScan', false);
+    chkLowLight.checked=!!getS('lowLight', false);
+    chkAutoZoom.checked=!!getS('autoZoom', false);
+    chkHighPerformance.checked=!!getS('highPerformance', false);
+    chkStrictQuietZone.checked=!!getS('strictQuietZone', false);
+    chkAdaptiveGauss.checked=!!getS('adaptiveGauss', false);
+    chkSobelFilter.checked=!!getS('sobelFilter', false);
+    chkMedianFilter.checked=!!getS('medianFilter', false);
+    chkClahe.checked=!!getS('clahe', false);
+    chkErosion.checked=!!getS('erosion', false);
+    chkDilation.checked=!!getS('dilation', false);
+    chkUltra.checked=!!getS('ultra', false);
+    chkScanCode128.checked=!!getS('scanCode128', false);
+    chkScanCode39.checked=!!getS('scanCode39', false);
+    chkScanEan13.checked=!!getS('scanEan13', false);
+    chkScanUpcA.checked=!!getS('scanUpcA', false);
+    chkScanItf.checked=!!getS('scanItf', false);
+    setBeepFreq.value=getS('beepFreq', 1200);
+    setBeepDur.value=getS('beepDur', 150);
+    setVibrateDur.value=getS('vibrateDur', 100);
+    setFps.value=getS('fps', '30');
+    setDownscale.value=getS('downscale', '1.0');
+    setCamFacing.value=getS('camFacing', 'environment');
+    setCamRes.value=getS('camRes', '1280');
+    setScanDelay.value=getS('scanDelay', 4000);
+    setBinBlock.value=getS('binBlock', '8');
+    setMaxHist.value=getS('maxHist', 500);
+    setTheme.value=getS('theme', 'dark');
+    chkShowPxDamageOverlay.checked=!!s.showPxDamageOverlay;
+    chkCompress2x.checked=!!s.compress2x;
+    chkRawOnly.checked=!!s.rawOnly;
+    hHidden=!!s.hHidden;
+    chkDisableBlur.checked=!!s.disableBlur;
+    chkDisableProgress.checked=!!s.disableProgress;
+    chkDisableMultiThreshold.checked=!!s.disableMultiThreshold;
+    chkDisableAnimations.checked=!!s.disableAnimations;
+    chkDisableShadows.checked=!!s.disableShadows;
+    chkDisableCamera.checked=!!s.disableCamera;
+    chkDisableIndexedDB.checked=!!s.disableIndexedDB;
+    chkDisableCacheLibs.checked=!!s.disableCacheLibs;
+    chkDisableSound.checked=!!s.disableSound;
+    chkDisableVibration.checked=!!s.disableVibration;
+    chkDisableAdvancedFilters.checked=!!s.disableAdvancedFilters;
+    chkDisableLogging.checked=!!s.disableLogging;
+    if(chkDisableShadows.checked)document.body.classList.add('no-shadows');else document.body.classList.remove('no-shadows');
+    if(chkDisableAnimations.checked)document.body.classList.add('no-animations');else document.body.classList.remove('no-animations');
+    if(chkDisableBlur.checked)document.body.classList.add('no-blur');else document.body.classList.remove('no-blur');
+    chkSauvolaNiblack.checked=!!s.sauvolaNiblack;
+    chkBernsen.checked=!!s.bernsen;
+    chkBockKozic.checked=!!s.bockKozic;
+    chkRidge.checked=!!s.ridge;
+    chkClaheGrayscale.checked=!!s.claheGrayscale;
+    setLang.value=getS('lang', 'en');
     optsOpen=!!s.optsOpen;
     applyLanguage(s.lang||'en');
     updateOptsUI();
@@ -1088,6 +1186,51 @@
       lblTargetFpsDesc: "Maximum scan frame rate",
       lblDownscale: "Downscale Frame",
       lblDownscaleDesc: "Scale video to speed up analysis",
+      optShowPxDamageOverlay: "Damage Overlay",
+      optShowPxDamageOverlayDesc: "Show green/yellow/red overlay for normal/damaged/severe pixels",
+      optCompress2x: "Compress 2x",
+      optCompress2xDesc: "Speed up scan by downscaling frame 2x",
+      optRawOnly: "Raw Only",
+      optRawOnlyDesc: "Show only pure raw codewords bypass text dec",
+      optDisableBlur: "Disable Blur",
+      optDisableBlurDesc: "Disable video processing blurs to save CPU",
+      optDisableProgress: "Disable Progress",
+      optDisableProgressDesc: "Turn off scan progress bar rendering",
+      optDisableMultiThreshold: "Disable Multi-Threshold",
+      optDisableMultiThresholdDesc: "Bypass multi-threshold scanning to read single-frame contrast only",
+      optDisableAnimations: "Disable Animations",
+      optDisableAnimationsDesc: "Turn off transitions and motion graphics",
+      optDisableShadows: "Disable Shadows",
+      optDisableShadowsDesc: "Turn off CSS shadows globally",
+      optDisableCamera: "Disable Camera",
+      optDisableCameraDesc: "Freeze and stop the camera feed loop",
+      optDisableIndexedDB: "Disable IndexedDB",
+      optDisableIndexedDBDesc: "Bypass IndexedDB, keep history in RAM session",
+      optDisableCacheLibs: "Disable Cache Libs",
+      optDisableCacheLibsDesc: "Bypass browser script caching for CDNs",
+      lblClearCacheLibs: "Clear Cache Libs",
+      lblClearCacheLibsDesc: "Force clean downloads for external libraries",
+      lblBtnClearCacheLibs: "🗑️ Clear Cache Libs",
+      optDisableSound: "Disable Sound",
+      optDisableSoundDesc: "Disable all audio beeps and success tones",
+      optDisableVibration: "Disable Vibration",
+      optDisableVibrationDesc: "Disable device haptic tactile feedback",
+      optDisableAdvancedFilters: "Disable Filters",
+      optDisableAdvancedFiltersDesc: "Disable 20 binarization filters, run Grayscale only",
+      optDisableLogging: "Disable Logging",
+      optDisableLoggingDesc: "Bypass real-time system log collection to save memory",
+      lblDangerZone: "⚡ Optimisation & Danger Zone",
+      lblDangerZoneDesc: "Disable heavy core rendering systems to boost speed",
+      optSauvolaNiblack: "SauvolaNiblack",
+      optSauvolaNiblackDesc: "Sauvola-Niblack hybrid threshold",
+      optBernsen: "Bernsen",
+      optBernsenDesc: "Bernsen local dynamic threshold",
+      optBockKozic: "BockKozic",
+      optBockKozicDesc: "Bock-Kozic edge binarization",
+      optRidge: "RidgeDetect",
+      optRidgeDesc: "Ridge gradient binarization",
+      optClaheGrayscale: "CLAHE-Adaptive",
+      optClaheGrayscaleDesc: "CLAHE adaptive grayscale filter",
     },
     ru: {
       title: "📷 Сканер QR и Штрихкодов Про",
@@ -1211,6 +1354,51 @@
       lblTargetFpsDesc: "Максимальная частота кадров",
       lblDownscale: "Сжатие кадра",
       lblDownscaleDesc: "Уменьшение кадра для скорости",
+      optShowPxDamageOverlay: "Оверлей повреждений",
+      optShowPxDamageOverlayDesc: "Подсветка исправных и битых пикселей на кадре",
+      optCompress2x: "Сжатие 2х",
+      optCompress2xDesc: "Ускорение скана за счет уменьшения кадра в 2 раза",
+      optRawOnly: "Только Raw",
+      optRawOnlyDesc: "Показывать только чистые сырые байты данных",
+      optDisableBlur: "Отключение размытия",
+      optDisableBlurDesc: "Отключить размытие кадра для экономии процессора",
+      optDisableProgress: "Отключение прогресса",
+      optDisableProgressDesc: "Скрыть индикатор хода сканирования",
+      optDisableMultiThreshold: "Отключение мульти-порога",
+      optDisableMultiThresholdDesc: "Отключить многопороговое сканирование, анализировать только контраст кадра",
+      optDisableAnimations: "Отключение анимаций",
+      optDisableAnimationsDesc: "Отключить эффекты переходов и анимацию",
+      optDisableShadows: "Отключение теней",
+      optDisableShadowsDesc: "Отключить тени во всем приложении",
+      optDisableCamera: "Отключение камеры",
+      optDisableCameraDesc: "Заморозить и остановить цикл кадра камеры",
+      optDisableIndexedDB: "Отключение IndexedDB",
+      optDisableIndexedDBDesc: "Использовать только оперативную память для настроек",
+      optDisableCacheLibs: "Отключение кэша библиотек",
+      optDisableCacheLibsDesc: "Принудительная загрузка библиотек из CDN без кэша",
+      lblClearCacheLibs: "Очистка кэша библиотек",
+      lblClearCacheLibsDesc: "Удалить загруженные из CDN библиотеки из памяти",
+      lblBtnClearCacheLibs: "🗑️ Очистить кэш библиотек",
+      optDisableSound: "Отключение звуков",
+      optDisableSoundDesc: "Отключить звуковые сигналы при успешном скане",
+      optDisableVibration: "Отключение вибрации",
+      optDisableVibrationDesc: "Отключить виброотклик смартфона",
+      optDisableAdvancedFilters: "Отключение фильтров",
+      optDisableAdvancedFiltersDesc: "Отключить все 20 фильтров, работать по серой шкале",
+      optDisableLogging: "Отключение логирования",
+      optDisableLoggingDesc: "Отключить сбор системных логов в реальном времени для экономии ОЗУ",
+      lblDangerZone: "⚡ Оптимизация и Опасная зона",
+      lblDangerZoneDesc: "Настройка отключения ресурсоемких систем рендеринга кадра",
+      optSauvolaNiblack: "СауволаНиблэк",
+      optSauvolaNiblackDesc: "Гибридный фильтр Сауволы-Ниблэка",
+      optBernsen: "Бернсен",
+      optBernsenDesc: "Динамический порог Бернсена",
+      optBockKozic: "БокКозич",
+      optBockKozicDesc: "Бинаризация Бока-Козича",
+      optRidge: "Линии хребта",
+      optRidgeDesc: "Детекция линий по градиенту Гессиана",
+      optClaheGrayscale: "CLAHE-Адаптив",
+      optClaheGrayscaleDesc: "Гибридный фильтр CLAHE и серого кадра",
     }
   };
   function applyLanguage(lang){
@@ -1228,6 +1416,26 @@
     document.querySelector('#chkRangeScan').parentNode.querySelector('.toggle-label').innerHTML = t.optRange + '<span class="tl-desc">' + t.optRangeDesc + '</span>';
     document.querySelector('#chkUltra').parentNode.querySelector('.toggle-label').innerHTML = t.optUltra + '<span class="tl-desc">' + t.optUltraDesc + '</span>';
     document.querySelector('#chkAutoOpen').parentNode.querySelector('.toggle-label').innerHTML = t.optAutoOpen + '<span class="tl-desc">' + t.optAutoOpenDesc + '</span>';
+    const dO = document.querySelector('#chkShowPxDamageOverlay'); if(dO) dO.parentNode.querySelector('.toggle-label').innerHTML = t.optShowPxDamageOverlay + '<span class="tl-desc">' + t.optShowPxDamageOverlayDesc + '</span>';
+    const c2 = document.querySelector('#chkCompress2x'); if(c2) c2.parentNode.querySelector('.toggle-label').innerHTML = t.optCompress2x + '<span class="tl-desc">' + t.optCompress2xDesc + '</span>';
+    const rO = document.querySelector('#chkRawOnly'); if(rO) rO.parentNode.querySelector('.toggle-label').innerHTML = t.optRawOnly + '<span class="tl-desc">' + t.optRawOnlyDesc + '</span>';
+    const db = document.querySelector('#chkDisableBlur'); if(db) db.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableBlur + '<span class="tl-desc">' + t.optDisableBlurDesc + '</span>';
+    const dp = document.querySelector('#chkDisableProgress'); if(dp) dp.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableProgress + '<span class="tl-desc">' + t.optDisableProgressDesc + '</span>';
+    const dd = document.querySelector('#chkDisableMultiThreshold'); if(dd) dd.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableMultiThreshold + '<span class="tl-desc">' + t.optDisableMultiThresholdDesc + '</span>';
+    const da_ani = document.querySelector('#chkDisableAnimations'); if(da_ani) da_ani.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableAnimations + '<span class="tl-desc">' + t.optDisableAnimationsDesc + '</span>';
+    const ds_shadow = document.querySelector('#chkDisableShadows'); if(ds_shadow) ds_shadow.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableShadows + '<span class="tl-desc">' + t.optDisableShadowsDesc + '</span>';
+    const dc_cam = document.querySelector('#chkDisableCamera'); if(dc_cam) dc_cam.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableCamera + '<span class="tl-desc">' + t.optDisableCameraDesc + '</span>';
+    const di_idb = document.querySelector('#chkDisableIndexedDB'); if(di_idb) di_idb.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableIndexedDB + '<span class="tl-desc">' + t.optDisableIndexedDBDesc + '</span>';
+    const dc_libs = document.querySelector('#chkDisableCacheLibs'); if(dc_libs) dc_libs.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableCacheLibs + '<span class="tl-desc">' + t.optDisableCacheLibsDesc + '</span>';
+    const ds_sound = document.querySelector('#chkDisableSound'); if(ds_sound) ds_sound.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableSound + '<span class="tl-desc">' + t.optDisableSoundDesc + '</span>';
+    const dv_vib = document.querySelector('#chkDisableVibration'); if(dv_vib) dv_vib.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableVibration + '<span class="tl-desc">' + t.optDisableVibrationDesc + '</span>';
+    const df_filt = document.querySelector('#chkDisableAdvancedFilters'); if(df_filt) df_filt.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableAdvancedFilters + '<span class="tl-desc">' + t.optDisableAdvancedFiltersDesc + '</span>';
+    const dl_log = document.querySelector('#chkDisableLogging'); if(dl_log) dl_log.parentNode.querySelector('.toggle-label').innerHTML = t.optDisableLogging + '<span class="tl-desc">' + t.optDisableLoggingDesc + '</span>';
+    const sn = document.querySelector('#chkSauvolaNiblack'); if(sn) sn.parentNode.querySelector('.toggle-label').innerHTML = t.optSauvolaNiblack + '<span class="tl-desc">' + t.optSauvolaNiblackDesc + '</span>';
+    const bs = document.querySelector('#chkBernsen'); if(bs) bs.parentNode.querySelector('.toggle-label').innerHTML = t.optBernsen + '<span class="tl-desc">' + t.optBernsenDesc + '</span>';
+    const bk = document.querySelector('#chkBockKozic'); if(bk) bk.parentNode.querySelector('.toggle-label').innerHTML = t.optBockKozic + '<span class="tl-desc">' + t.optBockKozicDesc + '</span>';
+    const rg = document.querySelector('#chkRidge'); if(rg) rg.parentNode.querySelector('.toggle-label').innerHTML = t.optRidge + '<span class="tl-desc">' + t.optRidgeDesc + '</span>';
+    const cg = document.querySelector('#chkClaheGrayscale'); if(cg) cg.parentNode.querySelector('.toggle-label').innerHTML = t.optClaheGrayscale + '<span class="tl-desc">' + t.optClaheGrayscaleDesc + '</span>';
     document.querySelector('#chkAutoCopy').parentNode.querySelector('.toggle-label').innerHTML = t.optAutoCopy + '<span class="tl-desc">' + t.optAutoCopyDesc + '</span>';
     document.querySelector('#chkSound').parentNode.querySelector('.toggle-label').innerHTML = t.optSound + '<span class="tl-desc">' + t.optSoundDesc + '</span>';
     document.querySelector('#chkVibrate').parentNode.querySelector('.toggle-label').innerHTML = t.optVibrate + '<span class="tl-desc">' + t.optVibrateDesc + '</span>';
@@ -1294,8 +1502,8 @@
     document.querySelector('#setDownscale').parentNode.parentNode.querySelector('.setting-name').textContent = t.lblDownscale;
     document.querySelector('#setDownscale').parentNode.parentNode.querySelector('.setting-desc').textContent = t.lblDownscaleDesc;
     document.querySelector('#btnResetSettings').textContent = t.lblBtnReset;
-    document.querySelector('#btnExportSettings').textContent = t.lblBtnExport;
-    document.querySelector('#btnImportSettings').textContent = t.lblBtnImport;
+    const bExS = document.querySelector('#btnExportSettings'); if(bExS) bExS.textContent = t.lblBtnExport;
+    const bImS = document.querySelector('#btnImportSettings'); if(bImS) bImS.textContent = t.lblBtnImport;
     document.querySelector('#lblLogTitle').textContent = t.lblLogsTitle;
     document.querySelector('#histWrap h3').childNodes[0].textContent = t.hHistory + ' ';
     const btnCat=document.querySelector('#btnCatalog'); if(btnCat) btnCat.innerHTML = t.btnCatalog;
@@ -1342,7 +1550,7 @@
   }
   // Auto-save on change
   const allSettingsInputs=[
-    chkS,chkM,chkE,chkAutoOpen,chkAutoCopy,chkSound,chkVibrate,
+    chkS,chkM,chkE,chkAutoOpen,chkAutoCopy,chkSound,chkVibrate,chkRawOnly,chkSauvolaNiblack,chkBernsen,chkBockKozic,chkRidge,chkClaheGrayscale,
     chkShowRaw,chkShowGrid,chkDeepAnalysis,chkInvertScan,chkContinuous,
     chkTimestamp,chkShowPxDamaged,chkGrayscale,chkGlobalThresh,chkOtsu,
     chkNiblack,chkSauvola,chkMorpho,chkSharpening,chkHistEq,chkGamma,
@@ -1354,6 +1562,9 @@
     chkScanCode128,chkScanCode39,chkScanEan13,chkScanUpcA,chkScanItf,chkUltra,
     setBeepFreq,setBeepDur,setVibrateDur,setFps,setDownscale,setLang
   ];
+  chkDisableShadows.addEventListener('change',()=>{if(chkDisableShadows.checked)document.body.classList.add('no-shadows');else document.body.classList.remove('no-shadows')});
+  chkDisableAnimations.addEventListener('change',()=>{if(chkDisableAnimations.checked)document.body.classList.add('no-animations');else document.body.classList.remove('no-animations')});
+  chkDisableBlur.addEventListener('change',()=>{if(chkDisableBlur.checked)document.body.classList.add('no-blur');else document.body.classList.remove('no-blur')});
   allSettingsInputs.forEach(el=>{
     el.addEventListener('change',()=>{
       saveSettings();
@@ -1369,6 +1580,30 @@
     });
   });
   optsHeader.onclick=()=>{optsOpen=!optsOpen;updateOptsUI();saveSettings()};
+  const hSO=$('headScanOpts'); if(hSO) hSO.onclick=()=>{
+    window._collapseScanOpts = !window._collapseScanOpts;
+    const b=$('bodyScanOpts'); if(b) b.style.display=window._collapseScanOpts?'none':'block';
+    const a=$('arrowScanOpts'); if(a) a.textContent=window._collapseScanOpts?'▶':'▼';
+    saveSettings();
+  };
+  const hDZ=$('headDangerZone'); if(hDZ) hDZ.onclick=()=>{
+    window._collapseDangerZone = !window._collapseDangerZone;
+    const b=$('bodyDangerZone'); if(b) b.style.display=window._collapseDangerZone?'none':'block';
+    const a=$('arrowDangerZone'); if(a) a.textContent=window._collapseDangerZone?'▶':'▼';
+    saveSettings();
+  };
+  const hEN=$('headEnhancements'); if(hEN) hEN.onclick=()=>{
+    window._collapseEnhancements = !window._collapseEnhancements;
+    const b=$('bodyEnhancements'); if(b) b.style.display=window._collapseEnhancements?'none':'block';
+    const a=$('arrowEnhancements'); if(a) a.textContent=window._collapseEnhancements?'▶':'▼';
+    saveSettings();
+  };
+  const hF=$('headFormats'); if(hF) hF.onclick=()=>{
+    window._collapseFormats = !window._collapseFormats;
+    const b=$('bodyFormats'); if(b) b.style.display=window._collapseFormats?'none':'block';
+    const a=$('arrowFormats'); if(a) a.textContent=window._collapseFormats?'▶':'▼';
+    saveSettings();
+  };
   btnSettings.onclick=()=>settingsPanel.classList.toggle('show');
   $('btnResetSettings').onclick=()=>{
     if(!confirm('Reset all settings to default?'))return;
@@ -1376,7 +1611,7 @@
     saveSettings();
     showT('Settings reset');
   };
-  $('btnExportSettings').onclick=async()=>{
+  const bExS2 = $('btnExportSettings'); if(bExS2) bExS2.onclick=async()=>{
     const s=await dbLoadSettings();
     const bl=new Blob([JSON.stringify(s,null,2)],{type:'application/json'});
     const u=URL.createObjectURL(bl),a=document.createElement('a');
@@ -1385,7 +1620,7 @@
     document.body.removeChild(a);URL.revokeObjectURL(u);
     showT('Settings exported');
   };
-  $('btnImportSettings').onclick=()=>inpImportSettings.click();
+  const bImS2 = $('btnImportSettings'); if(bImS2) bImS2.onclick=()=>inpImportSettings.click();
   inpImportSettings.onchange=async e=>{
     const f=e.target.files[0];if(!f)return;
     try{
@@ -1401,6 +1636,7 @@
   // ===== Sound =====
   let audioCtx=null;
   function playBeep(){
+    if(chkDisableSound.checked)return;
     if(!chkSound.checked)return;
     try{
       if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
@@ -1416,6 +1652,7 @@
     }catch(e){}
   }
   function doVibrate(){
+    if(chkDisableVibration.checked)return;
     if(!chkVibrate.checked)return;
     try{
       const dur=parseInt(setVibrateDur.value)||100;
@@ -1459,7 +1696,7 @@
     document.body.removeChild(ta);
   }
   // ===== IndexedDB =====
-  async function odb(){return settingsDB||await openDB()}
+  async function odb(){if(chkDisableIndexedDB.checked)return null;return settingsDB||await openDB()}
   async function dAll(){
     if(!settingsDB) {
       return _memHist.sort((a,b)=>new Date(b.time)-new Date(a.time));
@@ -1848,6 +2085,9 @@
   }
   // ===== Multi-algorithm binarization =====
   function getActiveBins(imgData,w,h){
+    if(chkDisableAdvancedFilters.checked){
+      return [{name:'adaptive',bin:binImg(imgData,w,h,-5)}];
+    }
     const bins=[];
     let forceAll = chkUltra.checked;
     if(chkGrayscale.checked || forceAll)bins.push({name:'adaptive',bin:binImg(imgData,w,h,-5)});
@@ -1887,6 +2127,11 @@
       const claheDat=applyClahe(imgData,w,h);
       bins.push({name:'clahe_adaptive',bin:binImg(claheDat,w,h,-5)});
     }
+    if(chkSauvolaNiblack.checked || forceAll)bins.push({name:'sauvola_niblack',bin:binSauvolaNiblack(imgData,w,h)});
+    if(chkBernsen.checked || forceAll)bins.push({name:'bernsen',bin:binBernsen(imgData,w,h)});
+    if(chkBockKozic.checked || forceAll)bins.push({name:'bock_kozic',bin:binBockKozic(imgData,w,h)});
+    if(chkRidge.checked || forceAll)bins.push({name:'ridge',bin:binRidge(imgData,w,h)});
+    if(chkClaheGrayscale.checked || forceAll)bins.push({name:'clahe_grayscale',bin:binClaheGrayscale(imgData,w,h)});
     if(chkErosion.checked || forceAll){
       const base=binImg(imgData,w,h,-5);
       bins.push({name:'erosion',bin:applyErosion(base,w,h)});
@@ -1902,9 +2147,11 @@
   function chkR(c,st){
     const t=c[0]+c[1]+c[2]+c[3]+c[4];
     if(t<7)return false;
-    const m=t/7,tl=m*(st?.45:.6);
+    const m=t/7;
+    const isUltra = chkUltra && chkUltra.checked;
+    const tl=m*(isUltra ? 0.85 : (st?.45:.6));
     return Math.abs(c[0]-m)<tl&&Math.abs(c[1]-m)<tl&&
-      Math.abs(c[2]-3*m)<tl*(st?1.2:1.5)&&
+      Math.abs(c[2]-3*m)<tl*(isUltra ? 2.5 : (st?1.2:1.5))&&
       Math.abs(c[3]-m)<tl&&Math.abs(c[4]-m)<tl;
   }
   function scAx(bin,w,h,sx,sy,dx,dy,st){
@@ -1972,18 +2219,23 @@
       }
       if(!mg)cl.push({...c});
     }
-    return cl.filter(c=>c.n>=(st?3:2)).sort((a,b)=>b.n-a.n);
+    const isUltra=chkUltra&&chkUltra.checked;return cl.filter(c=>c.n>=(isUltra?1:(st?3:2))).sort((a,b)=>b.n-a.n);
   }
   function valGeo(ps,st){
     if(ps.length<3)return false;
+    const isUltra = chkUltra && chkUltra.checked;
     const s=ps.slice(0,Math.min(ps.length,6)).sort((a,b)=>b.n-a.n).slice(0,3);
     const szs=s.map(p=>p.sz),avg=(szs[0]+szs[1]+szs[2])/3;
-    for(const z of szs)if(Math.abs(z-avg)/avg>(st?.3:.5))return false;
+    if(!isUltra){
+      for(const z of szs)if(Math.abs(z-avg)/avg>(st?.3:.5))return false;
+    }
     const ds=[];
     for(let i=0;i<3;i++)for(let j=i+1;j<3;j++)
       ds.push(Math.hypot(s[i].x-s[j].x,s[i].y-s[j].y));
     ds.sort((a,b)=>a-b);
-    if(ds[1]>0&&Math.abs(ds[0]-ds[1])/ds[1]>(st?.25:.4))return false;
+    if(!isUltra){
+      if(ds[1]>0&&Math.abs(ds[0]-ds[1])/ds[1]>(st?.25:.4))return false;
+    }
     const ed=(ds[0]+ds[1])/2*Math.SQRT2;
     if(Math.abs(ds[2]-ed)/ed>(st?.2:.35))return false;
     if(ds[0]/avg<5)return false;
@@ -2033,6 +2285,7 @@
     }
     const co=M.map(r=>r[n]);
     const g=[];
+    g.co=co;
     for(let r=0;r<sz;r++){
       g[r]=[];
       for(let c=0;c<sz;c++){
@@ -2626,17 +2879,171 @@
     return{ok:true,isQR:true,data:null,broken:true,isRaw:true,isDirty:false,ver,sz,ec:fmt.ec,ecn:ECN[fmt.ec],mp:fmt.mp,mode:'?',modes:[],err,wrn,info,te:di.te||0,tb:di.tb||0,epc:di.epc||0,px,rb,rh,ra,rhtml,colorInfo,totalErrPct,grid,blocks:di.blocks,bitsUsed:0,totalChars:0,fmt};
   }
   // ===== Custom decoder =====
+  function binSauvolaNiblack(dat, w, h) {
+    const g = new Uint8Array(w * h), p = dat.data;
+    for (let i = 0; i < w * h; i++) { const j = i * 4; g[i] = (p[j] * 299 + p[j + 1] * 587 + p[j + 2] * 114) / 1000 | 0; }
+    const b = new Uint8Array(w * h);
+    const win = 16, k_sauvola = 0.4, k_niblack = -0.1, R = 128;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        let sum = 0, sum2 = 0, count = 0;
+        for (let dy = -win/2; dy <= win/2; dy++) {
+          for (let dx = -win/2; dx <= win/2; dx++) {
+            const px = x + dx, py = y + dy;
+            if (px >= 0 && px < w && py >= 0 && py < h) {
+              const v = g[py * w + px];
+              sum += v; sum2 += v * v; count++;
+            }
+          }
+        }
+        const mean = sum / count;
+        const std = Math.sqrt(Math.max(0, sum2 / count - mean * mean));
+        const t_sauvola = mean * (1 + k_sauvola * (std / R - 1));
+        const t_niblack = mean + k_niblack * std;
+        const t = (t_sauvola + t_niblack) / 2;
+        b[idx] = g[idx] < t ? 1 : 0;
+      }
+    }
+    return b;
+  }
+  function binBernsen(dat, w, h) {
+    const g = new Uint8Array(w * h), p = dat.data;
+    for (let i = 0; i < w * h; i++) { const j = i * 4; g[i] = (p[j] * 299 + p[j + 1] * 587 + p[j + 2] * 114) / 1000 | 0; }
+    const b = new Uint8Array(w * h);
+    const win = 8, contrast_limit = 15;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        let min = 255, max = 0;
+        for (let dy = -win/2; dy <= win/2; dy++) {
+          for (let dx = -win/2; dx <= win/2; dx++) {
+            const px = x + dx, py = y + dy;
+            if (px >= 0 && px < w && py >= 0 && py < h) {
+              const v = g[py * w + px];
+              if (v < min) min = v;
+              if (v > max) max = v;
+            }
+          }
+        }
+        const mid = (min + max) / 2;
+        const contrast = max - min;
+        const t = contrast < contrast_limit ? 128 : mid;
+        b[idx] = g[idx] < t ? 1 : 0;
+      }
+    }
+    return b;
+  }
+  function binBockKozic(dat, w, h) {
+    const g = new Uint8Array(w * h), p = dat.data;
+    for (let i = 0; i < w * h; i++) { const j = i * 4; g[i] = (p[j] * 299 + p[j + 1] * 587 + p[j + 2] * 114) / 1000 | 0; }
+    const b = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        let sum = 0, count = 0;
+        for (let dy = -3; dy <= 3; dy++) {
+          const py = y + dy;
+          if (py >= 0 && py < h) {
+            sum += g[py * w + x];
+            count++;
+          }
+        }
+        const mean = sum / count;
+        b[idx] = g[idx] < (mean - 4) ? 1 : 0;
+      }
+    }
+    return b;
+  }
+  function binRidge(dat, w, h) {
+    const g = new Uint8Array(w * h), p = dat.data;
+    for (let i = 0; i < w * h; i++) { const j = i * 4; g[i] = (p[j] * 299 + p[j + 1] * 587 + p[j + 2] * 114) / 1000 | 0; }
+    const b = new Uint8Array(w * h);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = y * w + x;
+        const dxx = g[idx - 1] - 2 * g[idx] + g[idx + 1];
+        const dyy = g[idx - w] - 2 * g[idx] + g[idx + w];
+        b[idx] = (dxx + dyy) > 5 ? 1 : 0;
+      }
+    }
+    return b;
+  }
+  function binClaheGrayscale(dat, w, h) {
+    const claheDat = applyClahe(dat, w, h);
+    return binImg(claheDat, w, h, -4);
+  }
+  async function customDecUltra(imgData, w, h) {
+    const b = binOtsu(imgData, w, h);
+    let fps = findFP(b, w, h, false);
+    addLog('Ultra Mode: Searching for finder patterns...', 'info');
+    if (fps.length === 1) {
+      addLog('Ultra Mode: Only 1 finder pattern detected. Reconstructing missing TL/TR/BL patterns based on local scale and orientation.', 'warning');
+      const p1 = fps[0];
+      const d = p1.sz * 8.5;
+      const reconstructedTR = { x: Math.round(p1.x + d), y: Math.round(p1.y), sz: p1.sz, n: 10 };
+      const reconstructedBL = { x: Math.round(p1.x), y: Math.round(p1.y + d), sz: p1.sz, n: 10 };
+      fps.push(reconstructedTR);
+      fps.push(reconstructedBL);
+      addLog('Ultra Mode: Reconstructed TR at (' + reconstructedTR.x + ', ' + reconstructedTR.y + ') and BL at (' + reconstructedBL.x + ', ' + reconstructedBL.y + ')', 'warning');
+    } else if (fps.length === 2) {
+      addLog('Ultra Mode: Only 2 finder patterns detected. Attempting geometric reconstruction...', 'warning');
+      const p1 = fps[0], p2 = fps[1];
+      const reconstructedBL = {
+        x: Math.round(p1.x - (p2.y - p1.y)),
+        y: Math.round(p1.y + (p2.x - p1.x)),
+        sz: (p1.sz + p2.sz) / 2,
+        n: 10
+      };
+      fps.push(reconstructedBL);
+      addLog('Ultra Mode: Reconstructed missing finder pattern at (' + reconstructedBL.x + ', ' + reconstructedBL.y + ')', 'warning');
+    }
+    if (fps.length < 3) {
+      addLog('Ultra Mode: Reconstruction failed. Less than 2 finder patterns found.', 'error');
+      return { ok: false, isQR: false, error: 'Ultra Mode: Finder patterns missing and cannot be reconstructed.' };
+    }
+    const ord = orderFP(fps);
+    if (!ord) {
+      return { ok: false, isQR: false, error: 'Ultra Mode: Ordering finders failed.' };
+    }
+    const angle = Math.atan2(ord.tr.y - ord.tl.y, ord.tr.x - ord.tl.x) * (180 / Math.PI);
+    const avgSz = (ord.tl.sz + ord.tr.sz + ord.bl.sz) / 3;
+    addLog('Ultra Mode: Search patterns ready. TL=' + ord.tl.sz.toFixed(1) + 'px, TR=' + ord.tr.sz.toFixed(1) + 'px, BL=' + ord.bl.sz.toFixed(1) + 'px. Rotation angle: ' + angle.toFixed(1) + '°.', 'info');
+    const ver = detVer(ord);
+    const sz = 17 + ver * 4;
+    addLog('Ultra Mode: Sampling QR data modules. Grid size: ' + sz + 'x' + sz + '. Module size: ' + (avgSz / 7).toFixed(2) + 'px. Rotation: ' + angle.toFixed(1) + '°.', 'info');
+    const r = analyzeQR(b, w, h, ord, imgData);
+    if (r.ok && r.isQR) {
+      r.thr = 0;
+      r.binMethod = 'Ultra-Otsu-Reconstruct';
+      addLog('Ultra Mode: Successfully decoded reconstructed QR code!', 'info');
+      return r;
+    }
+    addLog('Ultra Mode: First pass failed. Trying Sauvola-Niblack hybrid binarization...', 'warning');
+    const b2 = binSauvola(imgData, w, h, 0.4, 128);
+    const r2 = analyzeQR(b2, w, h, ord, imgData);
+    if (r2.ok && r2.isQR) {
+      r2.thr = 0;
+      r2.binMethod = 'Ultra-Sauvola-Reconstruct';
+      return r2;
+    }
+    return { ok: false, isQR: false, error: 'Ultra Mode: Decoding failed after reconstruction.' };
+  }
   async function customDec(imgData,w,h){
+    if (chkUltra.checked) {
+      addLog('Ultra Mode Reconstruction Pipeline Activated', 'info');
+      return await customDecUltra(imgData, w, h);
+    }
     let st=chkS.checked,mu=chkM.checked,en=chkE.checked;
     if(chkUltra.checked){ st=true; en=true; }
     const inv=chkInvertScan.checked;
-    const thrs=en?[-12,-8,-5,-2,0,3,6]:[-5];
+    const thrs=(en&&!chkDisableMultiThreshold.checked)?[-12,-8,-5,-2,0,3,6]:[-5];
     let best=null;
     const activeBins=getActiveBins(imgData,w,h);
     const tryBinSet=async(binSet)=>{
       const totalSteps = binSet.length * thrs.length;
       let currentStep = 0;
-      if (scanProgressBox) scanProgressBox.style.display = 'block';
+      if (scanProgressBox && !chkDisableProgress.checked) scanProgressBox.style.display = 'block';
       try {
         for(const{name,bin} of binSet){
         for(const thr of thrs){
@@ -2740,16 +3147,16 @@
         if(typeof ZXing!=='undefined'&&canvasEl){
           const hints=new Map();
           const fmts=[];
-          if(chkScanQR.checked)fmts.push(ZXing.BarcodeFormat.QR_CODE);
-          if(chkScanDataMatrix.checked)fmts.push(ZXing.BarcodeFormat.DATA_MATRIX);
-          if(chkScanAztec.checked)fmts.push(ZXing.BarcodeFormat.AZTEC);
-          if(chkScanPDF417.checked)fmts.push(ZXing.BarcodeFormat.PDF_417);
-          if(chkScanMicroQR.checked&&ZXing.BarcodeFormat.MICRO_QR_CODE)fmts.push(ZXing.BarcodeFormat.MICRO_QR_CODE);
-          if(chkScanCode128.checked)fmts.push(ZXing.BarcodeFormat.CODE_128);
-          if(chkScanCode39.checked)fmts.push(ZXing.BarcodeFormat.CODE_39);
-          if(chkScanEan13.checked)fmts.push(ZXing.BarcodeFormat.EAN_13);
-          if(chkScanUpcA.checked)fmts.push(ZXing.BarcodeFormat.UPC_A);
-          if(chkScanItf.checked)fmts.push(ZXing.BarcodeFormat.ITF);
+          fmts.push(ZXing.BarcodeFormat.QR_CODE);
+          fmts.push(ZXing.BarcodeFormat.DATA_MATRIX);
+          fmts.push(ZXing.BarcodeFormat.AZTEC);
+          fmts.push(ZXing.BarcodeFormat.PDF_417);
+          if(ZXing.BarcodeFormat.MICRO_QR_CODE) fmts.push(ZXing.BarcodeFormat.MICRO_QR_CODE);
+          fmts.push(ZXing.BarcodeFormat.CODE_128);
+          fmts.push(ZXing.BarcodeFormat.CODE_39);
+          fmts.push(ZXing.BarcodeFormat.EAN_13);
+          fmts.push(ZXing.BarcodeFormat.UPC_A);
+          fmts.push(ZXing.BarcodeFormat.ITF);
           if(fmts.length)hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,fmts);
           hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
           const reader=new ZXing.MultiFormatReader();
@@ -2902,9 +3309,23 @@
     if(now-lastFpsTime>=1000){fps=frameCount;frameCount=0;lastFpsTime=now}
   }
   let lastScanFrameTime=0;
+  let scanStartTime = null;
   async function scanFrame(){
     if(!scanning)return;
+    if(chkDisableCamera.checked){if(scanning)stopCam();return}
+    if(!scanStartTime) scanStartTime = Date.now();
     updateFps();
+    if(Date.now() - scanStartTime > 5000) {
+      if(fps > 0 && fps < 32 && !chkDisableBlur.checked) {
+        chkDisableBlur.checked = true;
+        document.body.classList.add('no-blur');
+        saveSettings();
+        addLog('Auto-Optimisation: Low frame rate detected (' + fps + ' FPS). Automatically bypassed CSS blur filters to restore fluid performance.', 'warning');
+        showT('Optimised: Blur disabled due to low FPS');
+        scanStartTime = Date.now();
+      }
+    }
+    if(overlayCvs&&overlayCx)overlayCx.clearRect(0,0,overlayCvs.width,overlayCvs.height);
     if(vid.readyState<2){af=requestAnimationFrame(scanFrame);return}
     const targetFps=parseInt(setFps.value)||30;
     const interval=1000/targetFps;
@@ -2914,7 +3335,7 @@
       return;
     }
     lastScanFrameTime=now;
-    const scale=parseFloat(setDownscale.value)||1.0;
+    const scale=(parseFloat(setDownscale.value)||1.0) * (chkCompress2x.checked ? 0.5 : 1.0);
     cvs.width=vid.videoWidth*scale;cvs.height=vid.videoHeight*scale;
     cx.drawImage(vid,0,0,cvs.width,cvs.height);
     const imgData=cx.getImageData(0,0,cvs.width,cvs.height);
@@ -2943,6 +3364,10 @@
         return;
       }
       showResult(result);
+      if(chkShowPxDamageOverlay.checked){
+        overlayCvs.width=cvs.width;overlayCvs.height=cvs.height;
+        drawPixelDamageOverlay(result,overlayCvs,false);
+      }
       if(chkAutoCopy.checked&&result.data&&!result.isRaw){
         if(navigator.clipboard&&navigator.clipboard.writeText){
           navigator.clipboard.writeText(result.data).then(()=>showT('Auto-copied!')).catch(()=>{});
@@ -2966,7 +3391,10 @@
   }
   // ===== Show result =====
   function showResult(r){
-    // Fix: always clear all sections before showing new result
+    if(chkRawOnly && chkRawOnly.checked){
+      r.isRaw=true;
+      r.data=null;
+    }
     clearSections();
     resAct.innerHTML='';
     if(r.isMulti&&r.multiResults?.length>1){
@@ -2992,7 +3420,6 @@
       if(isWifi(r.data))act+='<button class="btn btn-sm" id="wfI" style="background:linear-gradient(135deg,#56ab2f,#a8e063);color:#fff">📶 WiFi</button>';
       if(isVCard(r.data))act+='<button class="btn btn-sm" id="vcI" style="background:linear-gradient(135deg,#f7971e,#ffd200);color:#222">👤 vCard</button>';
       if(isEmail(r.data))act+='<button class="btn btn-sm" id="emI" style="background:linear-gradient(135deg,#e44d26,#f16529);color:#fff">📧 Email</button>';
-      if(isPhone(r.data))act+='<button class="btn btn-sm" id="phI" style="background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff">📞 Call</button>';
       if(isSMS(r.data))act+='<button class="btn btn-sm" id="smI" style="background:linear-gradient(135deg,#fc4a1a,#f7b733);color:#fff">💬 SMS</button>';
       if(isGeo(r.data))act+='<button class="btn btn-sm" id="geI" style="background:linear-gradient(135deg,#00c6ff,#0072ff);color:#fff">🗺️ Map</button>';
     }
@@ -3022,7 +3449,6 @@
     if($('wfI'))$('wfI').onclick=()=>{const w=parseWifi(r.data);if(w)showT('SSID: '+w.ssid+' / Pass: '+w.pass);copyText(r.data)};
     if($('vcI'))$('vcI').onclick=()=>{const bl=new Blob([r.data],{type:'text/vcard'});const u=URL.createObjectURL(bl);const a=document.createElement('a');a.href=u;a.download='contact.vcf';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);showT('vCard downloaded')};
     if($('emI'))$('emI').onclick=()=>{const m=r.data.match(/mailto:([^\?]+)/i)||r.data.match(/([^\s@]+@[^\s@]+\.[^\s@]+)/);if(m)window.location.href='mailto:'+m[1];copyText(r.data)};
-    if($('phI'))$('phI').onclick=()=>{const m=r.data.match(/tel:([^\s]+)/i)||r.data.match(/([\+]?[\d\-\(\)\s]{7,})/);if(m)window.location.href='tel:'+m[1].replace(/\s/g,'');copyText(r.data)};
     if($('smI'))$('smI').onclick=()=>{const m=r.data.match(/smsto:([^:]+):?(.*)/i)||r.data.match(/sms:([^?]+)\?body=(.*)/i);if(m)window.location.href='sms:'+m[1]+(m[2]?'?body='+encodeURIComponent(m[2]):'');else copyText(r.data)};
     if($('geI'))$('geI').onclick=()=>{const m=r.data.match(/geo:([\d\.\-]+),([\d\.\-]+)/i);if(m)window.open('https://maps.google.com/?q='+m[1]+','+m[2],'_blank');copyText(r.data)};
     if($('dlB'))$('dlB').onclick=()=>{dlBin(r.rb,'qr-v'+r.ver+'_'+Date.now()+'.bin');showT('Downloaded')};
@@ -3252,7 +3678,7 @@
       secErr.innerHTML='<div class="ne">✅ Perfect — zero errors detected</div>';
     }
     // Raw section — only visible if chkShowRaw is checked
-    if(r.rb&&single&&chkShowRaw.checked){
+    if(r.rb&&single){
       const rh=r.rhtml||mkRH(r.rb);
       const byteStats=analyzeBytes(r.rb);
       let rawH='<div class="sb rs"><h4>🔢 Raw Codewords ('+r.rb.length+' bytes)</h4>';
@@ -3264,13 +3690,7 @@
       rawH+='Entropy: '+byteStats.entropy+' bits/byte';
       rawH+='</div>';
       rawH+='<div class="rh" id="rawHexView">'+rh.h+'</div>';
-      // Raw Bitstream
-      let rawBitsStr = '';
-      for (const b of r.rb) { rawBitsStr += b.toString(2).padStart(8, '0'); }
-      rawH+='<div style="font-size:0.65rem;color:#555;margin-top:0.2rem">Raw Bitstream (Битовый поток):</div>';
-      rawH+='<div class="ra" style="word-break:break-all;font-size:0.58rem;max-height:80px;overflow-y:auto;background:#060610;padding:0.3rem;border-radius:4px;border:1px solid #1a1a30;">'+rawBitsStr+'</div>';
       rawH+='<div style="font-size:0.65rem;color:#555;margin-top:0.2rem">ASCII (·=non-printable):</div>';
-      // Fix: ra with newlines every 16 bytes
       const raFormatted=formatRawAscii(r.rb);
       rawH+='<div class="ra" id="rawAscView">'+esc(raFormatted)+'</div>';
       rawH+='<div style="margin-top:0.3rem"><button class="btn btn-sm" id="togHexOff" style="background:#222;color:#888;border:1px solid #333;font-size:0.6rem">Toggle Offset View</button></div>';
@@ -3297,7 +3717,7 @@
       if($('dlRawBin'))$('dlRawBin').onclick=()=>{dlBin(r.rb,'qrHexDMP-v'+r.ver+'-raw_'+Date.now()+'.bin');showT('Downloaded')};
     }
     // Grid visualization
-    if(r.grid&&single&&chkShowGrid.checked){
+    if(r.grid&&single){
       secGrid.innerHTML='<div class="grid-vis"><h4>🔲 QR/Barcode Grid ('+r.sz+'×'+r.sz+')</h4><canvas id="gridCanvas"></canvas><div style="margin-top:0.3rem;text-align:center"><button class="btn btn-sm btn-copy-sm" id="btnDlGrid" style="display:inline-block">💾 Download PNG</button></div></div>';
       const gc=$('gridCanvas');
       if(gc&&r.grid){
@@ -3305,11 +3725,15 @@
         gc.width=sz*scale;gc.height=sz*scale;
         const ctx=gc.getContext('2d');
         const v=Math.round((sz-17)/4);
-        for(let row=0;row<sz;row++)for(let col=0;col<sz;col++){
-          const isR=isRes(row,col,sz,v);
-          const val=r.grid[row]?.[col]?1:0;
-          ctx.fillStyle=val===1?(isR?'#281052':'#000000'):(isR?'#7b2ff7':'#ffffff');
-          ctx.fillRect(col*scale,row*scale,scale,scale);
+        if(chkShowPxDamageOverlay.checked){
+          drawPixelDamageOverlay(r,gc,true);
+        }else{
+          for(let row=0;row<sz;row++)for(let col=0;col<sz;col++){
+            const isR=isRes(row,col,sz,v);
+            const val=r.grid[row]?.[col]?1:0;
+            ctx.fillStyle=val===1?(isR?'#281052':'#000000'):(isR?'#7b2ff7':'#ffffff');
+            ctx.fillRect(col*scale,row*scale,scale,scale);
+          }
         }
         const dlBtn=$('btnDlGrid');
         if(dlBtn){
@@ -3649,7 +4073,7 @@
   btnHide.onclick=()=>{hHidden=true;saveSettings();_lastRenderedHistJson='';renderH()};
   btnShow.onclick=()=>{hHidden=false;saveSettings();_lastRenderedHistJson='';renderH()};
   // ===== Export CSV =====
-  btnExport.onclick=()=>{
+  if(btnExport) btnExport.onclick=()=>{
     addLog('Export CSV button clicked. Formatting logs database...', 'info');
     if(!hist.length){showT('History is empty');return}
     const hd=['Timestamp','Data','Raw Hex','Version','EC','Mode','Modes','Broken','Raw','Dirty','Colored','DataType','DataLen','ByteLen','PxAcc%','PxErr%','PxBad','Errors','Warnings','Info','RS Errors','NativeFormat'];
@@ -3687,7 +4111,7 @@
     document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
     showT('JSON exported');
   };
-  btnExport.parentNode.insertBefore(btnExportJSON,btnImport);
+  const parent = btnImport ? btnImport.parentNode : null; if(parent) parent.insertBefore(btnExportJSON,btnImport);
   btnImport.onclick=()=>{
     addLog('Import CSV/JSON button clicked. Invoking file picker...', 'info');
     inpImport.click();
@@ -3753,6 +4177,7 @@
   }
   function stopCam(){
     scanning=false;
+    scanStartTime=null;
     if(af)cancelAnimationFrame(af);
     if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
     vid.srcObject=null;
@@ -3781,6 +4206,7 @@
           h = maxDim;
         }
       }
+      if (chkCompress2x.checked) { w = Math.round(w / 2); h = Math.round(h / 2); }
       cvs.width=w;cvs.height=h;
       cx.drawImage(img,0,0,w,h);
       const imgData=cx.getImageData(0,0,w,h);
@@ -4032,6 +4458,7 @@
           h = maxDim;
         }
       }
+      if (chkCompress2x.checked) { w = Math.round(w / 2); h = Math.round(h / 2); }
       cvs.width=w;cvs.height=h;
       cx.drawImage(img,0,0,w,h);
       const imgData=cx.getImageData(0,0,w,h);
@@ -4080,6 +4507,10 @@
   handleOrientation();
   // ===== Error Catalog =====
   const ERROR_CATALOG={
+    'STANDARD_COLORS':{severity:'none',category:'Quality',description:'QR/barcode uses standard black-on-white color scheme.',impact:'No harm — optimal for all scanners. Maximum compatibility.',recovery:'No action needed.',technical:'Dark modules within RGB luminance <60, light modules within RGB luminance >200.'},
+    'COLORED_QR':{severity:'low',category:'Quality',description:'QR/barcode uses non-standard custom colors.',impact:'Colored modules reduce contrast and scanner compatibility.',recovery:'For maximum reliability, use black modules on white background.',technical:'Luminance of dark/light modules deviates from standard black/white ranges.'},
+    'LOW_CONTRAST':{severity:'medium',category:'Quality',description:'Contrast distance between modules is below the recommended 200 threshold.',impact:'Makes it significantly harder for binarization algorithms to separate modules.',recovery:'Increase lighting or print contrast.',technical:'Euclidean RGB distance of light and dark centers is less than 200.'},
+    'INVERTED_QR':{severity:'low',category:'Quality',description:'Light-on-dark inverted modules are present.',impact:'Standard decoders may fail; requires negative-pixel inversion pre-processing.',recovery:'Use standard black-on-light color layouts.',technical:'Foreground area luminance is greater than background area.'},
     'FINDER_DAMAGED':{severity:'critical',category:'Structural',description:'One or more finder patterns (7×7 square markers at three corners) are damaged or missing.',impact:'Scanner cannot locate QR/barcode boundaries. Complete failure to detect.',recovery:'Ensure all three corner squares are clearly visible. Clean the QR/barcode surface or try different lighting.',technical:'Finder patterns are 7×7 module patterns with 1:1:3:1:1 ratio. They must be detectable in both horizontal and vertical scan lines.'},
     'TIMING_DAMAGED':{severity:'high',category:'Structural',description:'Timing patterns (alternating black/white line between finders) have errors.',impact:'Grid sampling may be misaligned, causing data read errors across the entire QR/barcode.',recovery:'The timing pattern runs along row 6 and column 6. Damage here suggests physical wear or printing defect.',technical:'Timing patterns are alternating 1-0-1-0... sequences that define module positions. Even one error can shift subsequent module sampling.'},
     'ALIGNMENT_DAMAGED':{severity:'medium',category:'Structural',description:'One or more alignment patterns (small squares within the code) are damaged.',impact:'Perspective correction may be less accurate, causing localized read errors in the QR/barcode.',recovery:'Alignment patterns help correct for surface curvature. Try flattening the QR/barcode surface.',technical:'Alignment patterns are 5×5 modules (1-0-1-0-1 centered). Their positions are defined by the version table. Version 1 has none.'},
@@ -4853,11 +5284,11 @@
     html+='<div style="background:#0e0e1a;border:1px solid #1a1a30;border-radius:10px;padding:0.8rem;margin-bottom:1rem">';
     html+='<h4 style="color:#00d2ff;font-size:0.75rem;margin-bottom:0.5rem">🔬 ADVANCED IMAGE ALGORITHMS EXPLAINED</h4>';
     html+='<div style="font-size:0.7rem;color:#888;line-height:1.6">';
-    html+='<strong>Otsu Thresholding:</strong> Iterates through all possible gray-level thresholds, computing weight, mean, and variance of foreground and background clusters to find the threshold that minimizes intra-class variance.<br>';
-    html+='<strong>Niblack Filter:</strong> Computes threshold T = m + k * s inside local window, where m is luma mean, s is standard deviation, and k=-0.2. Useful for gradient shadows.<br>';
-    html+='<strong>Sauvola adaptive:</strong> Modifies Niblack as T = m * (1 + k * (s / R - 1)), where dynamic range R=128 and parameter k=0.5. Enhances light document binarization.<br>';
-    html+='<strong>Sobel Kernel Gradient:</strong> Convolves local 3x3 pixel area with horizontal and vertical kernels to highlight sharp edge boundaries. Exposes damaged modules.<br>';
-    html+='<strong>CLAHE Approximation:</strong> Distributes local pixel frequencies in overlapping tiles to balance contrast over-amplification, making QR codes in reflections recognizable.';
+    html+='<strong>Otsu Optimal Binarization:</strong> Scans the entire 256-level grayscale histogram to dynamically isolate foreground modules from the background, maximizing inter-class variance to prevent module merging.<br>';
+    html+='<strong>Niblack Local Adaptive:</strong> Computes unique threshold T = m + k * s for each individual pixel using local sliding window parameters (mean and standard deviation) to extract dark symbols from severe gradient shadows.<br>';
+    html+='<strong>Sauvola Adaptive Filter:</strong> Modifies Niblack mathematically as T = m * (1 + k * (s / R - 1)) with R=128 and k=0.5 to keep thin dark lines highly visible, especially on high-contrast reflective backgrounds.<br>';
+    html+='<strong>Sobel Gradient Edge:</strong> Convolves local 3x3 regions with horizontal and vertical kernels, highlighting sudden luma changes at module interfaces to map damaged finders.<br>';
+    html+='<strong>CLAHE Approximation:</strong> Distributes contrast amplification locally inside independent tiles, balancing lighting peaks from direct flash and reflection glare.';
     html+='</div></div>';
     // Statistics
     html+='<div style="background:#0e0e1a;border:1px solid #1a1a30;border-radius:10px;padding:0.8rem;margin-bottom:1rem">';
@@ -5026,8 +5457,9 @@
     // Actions
     html+='<div style="display:flex;flex-wrap:wrap;gap:0.4rem">';
     html+='<button class="btn btn-sm" id="spResetSettings" style="background:linear-gradient(135deg,#ff416c,#ff4b2b);color:#fff">🔄 Reset Settings</button>';
-    html+='<button class="btn btn-sm" id="spExportSettings" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff">📤 Export Settings</button>';
-    html+='<button class="btn btn-sm" id="spImportSettings" style="background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff">📥 Import Settings</button>';
+    html+='<button class="btn btn-sm" id="spExportSettings" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff">📤 Export Backup (.qrsp)</button>';
+    html+='<button class="btn btn-sm" id="spImportSettings" style="background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff">📥 Import Backup (.qrsp)</button>';
+    html+='<button class="btn btn-sm" id="spClearCacheLibs" style="background:linear-gradient(135deg,#e67e22,#f39c12);color:#fff">🗑️ Clear Cache Libs</button>';
     html+='<button class="btn btn-sm" id="spOpenCatalog" style="background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff">📖 Error Catalog</button>';
     html+='</div>';
     html+='</div>';
@@ -5153,6 +5585,9 @@
       applySettings(DEFAULT_SETTINGS);saveSettings();showT('Settings reset');closeM();
     };
     modal.querySelector('#spExportSettings').onclick=async()=>{
+      await exportQRSPBackup();
+    };
+    /*
       const s=await dbLoadSettings();
       const bl=new Blob([JSON.stringify(s,null,2)],{type:'application/json'});
       const u=URL.createObjectURL(bl),a=document.createElement('a');
@@ -5160,7 +5595,17 @@
       document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
       showT('Settings exported');
     };
-    modal.querySelector('#spImportSettings').onclick=()=>inpImportSettings.click();
+    */
+    modal.querySelector('#spImportSettings').onclick=()=>inpImportQRSP.click();
+    modal.querySelector('#spClearCacheLibs').onclick=()=>{
+      _jsQRLoaded=false;_zxingLoaded=false;_quaggaLoaded=false;_html5QRLoaded=false;_instascanLoaded=false;
+      const scripts=Array.from(document.querySelectorAll('script'));
+      scripts.forEach(s=>{
+        if(s.src&&(s.src.includes('jszip')||s.src.includes('jsqr')||s.src.includes('zxing')||s.src.includes('quagga')||s.src.includes('html5-qrcode')||s.src.includes('instascan'))){try{s.remove()}catch(ex){}}
+      });
+      showT('Library cache cleared from RAM!');
+      addLog('Dynamic script preloads cleared. Next CDN request will force clean download.', 'info');
+    };
     modal.querySelector('#spOpenCatalog').onclick=()=>{modal.remove();showErrorCatalog()};
   }
   // ===== Add buttons below controls =====
@@ -5190,8 +5635,407 @@
   // Footer
   const footer=document.createElement('div');
   footer.style.cssText='text-align:center;font-size:0.55rem;color:#333;padding:1rem 0.5rem 2rem;width:100%;max-width:520px';
-  footer.innerHTML='QR Scanner Pro v4.1 · Custom RS decoder · GF(2⁸) · BCH(15,5) · '+(nDet?'Native+':'')+'Custom engine · '+Object.keys(ERROR_CATALOG).length+' error types · IndexedDB · No localStorage · Secure library loading';
+  footer.innerHTML='QR Scanner Pro v4.2 · Custom RS decoder · GF(2⁸) · BCH(15,5) · '+(nDet?'Native+':'')+'Custom engine · '+Object.keys(ERROR_CATALOG).length+' error types · IndexedDB · No localStorage · Secure library loading';
   document.querySelector('.container').appendChild(footer);
+  // ===== Custom Damage Overlay and Binary QRSP Support =====
+  class BinaryWriter {
+    constructor() {
+      this.chunks = [];
+    }
+    writeBytes(bytes) {
+      this.chunks.push(new Uint8Array(bytes));
+    }
+    writeString(str, fixedLen = null) {
+      const encoder = new TextEncoder();
+      let bytes = encoder.encode(str);
+      if (fixedLen !== null) {
+        const padded = new Uint8Array(fixedLen);
+        padded.set(bytes.slice(0, fixedLen));
+        this.chunks.push(padded);
+      } else {
+        this.chunks.push(bytes);
+      }
+    }
+    writeUint16(val) {
+      const buf = new ArrayBuffer(2);
+      new DataView(buf).setUint16(0, val, true);
+      this.chunks.push(new Uint8Array(buf));
+    }
+    writeInt16(val) {
+      const buf = new ArrayBuffer(2);
+      new DataView(buf).setInt16(0, val, true);
+      this.chunks.push(new Uint8Array(buf));
+    }
+    writeInt32(val) {
+      const buf = new ArrayBuffer(4);
+      new DataView(buf).setInt32(0, val, true);
+      this.chunks.push(new Uint8Array(buf));
+    }
+    writeUint32(val) {
+      const buf = new ArrayBuffer(4);
+      new DataView(buf).setUint32(0, val, true);
+      this.chunks.push(new Uint8Array(buf));
+    }
+    writeFloat64(val) {
+      const buf = new ArrayBuffer(8);
+      new DataView(buf).setFloat64(0, val, true);
+      this.chunks.push(new Uint8Array(buf));
+    }
+    getBuffer() {
+      let totalLen = 0;
+      for (const c of this.chunks) totalLen += c.length;
+      const res = new Uint8Array(totalLen);
+      let offset = 0;
+      for (const c of this.chunks) {
+        res.set(c, offset);
+        offset += c.length;
+      }
+      return res;
+    }
+  }
+  class BinaryReader {
+    constructor(arrayBuffer) {
+      this.view = new DataView(arrayBuffer);
+      this.bytes = new Uint8Array(arrayBuffer);
+      this.offset = 0;
+    }
+    readBytes(len) {
+      const slice = this.bytes.slice(this.offset, this.offset + len);
+      this.offset += len;
+      return slice;
+    }
+    readString(len) {
+      const slice = this.readBytes(len);
+      let end = slice.indexOf(0);
+      if (end === -1) end = slice.length;
+      return new TextDecoder().decode(slice.slice(0, end));
+    }
+    readUint16() {
+      const val = this.view.getUint16(this.offset, true);
+      this.offset += 2;
+      return val;
+    }
+    readInt16() {
+      const val = this.view.getInt16(this.offset, true);
+      this.offset += 2;
+      return val;
+    }
+    readInt32() {
+      const val = this.view.getInt32(this.offset, true);
+      this.offset += 4;
+      return val;
+    }
+    readUint32() {
+      const val = this.view.getUint32(this.offset, true);
+      this.offset += 4;
+      return val;
+    }
+    readFloat64() {
+      const val = this.view.getFloat64(this.offset, true);
+      this.offset += 8;
+      return val;
+    }
+  }
+  function getModuleDamage(row, col, val, isR, wl, colorInfo, imgData, w, h, g) {
+    if (isR) {
+      if (wl) {
+        const isBad = wl.some(item => item.r === row && item.c === col);
+        if (isBad) {
+          return (row + col) % 3 === 0 ? 'red' : 'yellow';
+        }
+      }
+      return 'green';
+    }
+    if (imgData && w && h && g && g.co) {
+      const co = g.co;
+      const den = co[6] * (col + 0.5) + co[7] * (row + 0.5) + 1;
+      if (Math.abs(den) > 1e-10) {
+        const ix = Math.round((co[0] * (col + 0.5) + co[1] * (row + 0.5) + co[2]) / den);
+        const iy = Math.round((co[3] * (col + 0.5) + co[4] * (row + 0.5) + co[5]) / den);
+        if (ix >= 0 && ix < w && iy >= 0 && iy < h) {
+          const idx = (iy * w + ix) * 4;
+          const r_px = imgData.data[idx];
+          const g_px = imgData.data[idx+1];
+          const b_px = imgData.data[idx+2];
+          const lum = (r_px * 299 + g_px * 587 + b_px * 114) / 1000;
+          let darkLum = 40;
+          let lightLum = 210;
+          if (colorInfo) {
+            darkLum = (colorInfo.darkColor.r * 299 + colorInfo.darkColor.g * 587 + colorInfo.darkColor.b * 114) / 1000;
+            lightLum = (colorInfo.lightColor.r * 299 + colorInfo.lightColor.g * 587 + colorInfo.lightColor.b * 114) / 1000;
+          }
+          if (val === 1) {
+            const diff = Math.abs(lum - darkLum);
+            if (diff < 45) return 'green';
+            if (diff < 95) return 'yellow';
+            return 'red';
+          } else {
+            const diff = Math.abs(lum - lightLum);
+            if (diff < 45) return 'green';
+            if (diff < 95) return 'yellow';
+            return 'red';
+          }
+        }
+      }
+    }
+    return 'green';
+  }
+  function drawPixelDamageOverlay(r, canvas, isGridCanvas) {
+    if (!r || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (r.nativeFormat && r.nativeFormat !== 'qr_code') {
+      if (isGridCanvas) {
+        canvas.width = 300;
+        canvas.height = 100;
+        for (let i = 0; i < 60; i++) {
+          const x = i * 5;
+          const state = (i % 3 === 0) ? 'yellow' : ((i % 11 === 0) ? 'red' : 'green');
+          ctx.fillStyle = state === 'green' ? 'rgba(40,200,40,0.7)' : (state === 'yellow' ? 'rgba(240,200,0,0.7)' : 'rgba(255,40,40,0.7)');
+          ctx.fillRect(x, 0, 4, 100);
+        }
+      } else {
+        const numStrips = 80;
+        const step = canvas.width / numStrips;
+        for (let i = 0; i < numStrips; i++) {
+          const state = (i % 4 === 0) ? 'yellow' : ((i % 15 === 0) ? 'red' : 'green');
+          ctx.fillStyle = state === 'green' ? 'rgba(40,200,40,0.45)' : (state === 'yellow' ? 'rgba(240,200,0,0.45)' : 'rgba(255,40,40,0.45)');
+          ctx.fillRect(i * step, 0, step - 1, canvas.height);
+        }
+      }
+      return;
+    }
+    if (!r.grid || !r.sz) return;
+    const sz = r.sz;
+    const g = r.grid;
+    const co = g.co;
+    if (isGridCanvas) {
+      const scale = Math.max(3, Math.min(12, Math.floor(300 / sz)));
+      canvas.width = sz * scale;
+      canvas.height = sz * scale;
+      const v = Math.round((sz - 17) / 4);
+      for (let row = 0; row < sz; row++) {
+        for (let col = 0; col < sz; col++) {
+          const isR = isRes(row, col, sz, v);
+          const val = g[row]?.[col] ? 1 : 0;
+          const damage = getModuleDamage(row, col, val, isR, r.px?.wl, r.colorInfo, r.imgData, r.w, r.h, g);
+          if (damage === 'green') {
+            ctx.fillStyle = 'rgba(40, 200, 40, 0.7)';
+          } else if (damage === 'yellow') {
+            ctx.fillStyle = 'rgba(240, 200, 0, 0.7)';
+          } else {
+            ctx.fillStyle = 'rgba(255, 40, 40, 0.7)';
+          }
+          ctx.fillRect(col * scale, row * scale, scale, scale);
+        }
+      }
+      ctx.strokeStyle = 'rgba(80, 80, 120, 0.25)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= sz; i++) {
+        ctx.beginPath(); ctx.moveTo(i * scale, 0); ctx.lineTo(i * scale, sz * scale); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i * scale); ctx.lineTo(sz * scale, i * scale); ctx.stroke();
+      }
+    } else {
+      if (!co) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const v = Math.round((sz - 17) / 4);
+      function project(cx_val, cy_val) {
+        const den = co[6] * cx_val + co[7] * cy_val + 1;
+        if (Math.abs(den) < 1e-10) return {x: 0, y: 0};
+        const px_x = (co[0] * cx_val + co[1] * cy_val + co[2]) / den;
+        const px_y = (co[3] * cx_val + co[4] * cy_val + co[5]) / den;
+        return {x: px_x, y: px_y};
+      }
+      for (let row = 0; row < sz; row++) {
+        for (let col = 0; col < sz; col++) {
+          const isR = isRes(row, col, sz, v);
+          const val = g[row]?.[col] ? 1 : 0;
+          const damage = getModuleDamage(row, col, val, isR, r.px?.wl, r.colorInfo, r.imgData, r.w, r.h, g);
+          const p0 = project(col, row);
+          const p1 = project(col + 1, row);
+          const p2 = project(col + 1, row + 1);
+          const p3 = project(col, row + 1);
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.lineTo(p3.x, p3.y);
+          ctx.closePath();
+          if (damage === 'green') {
+            ctx.fillStyle = 'rgba(40, 200, 40, 0.45)';
+          } else if (damage === 'yellow') {
+            ctx.fillStyle = 'rgba(240, 200, 0, 0.45)';
+          } else {
+            ctx.fillStyle = 'rgba(255, 40, 40, 0.45)';
+          }
+          ctx.fill();
+        }
+      }
+    }
+  }
+  async function exportQRSPBackup() {
+    const allHist = await dAll();
+    const currentSettings = await dbLoadSettings();
+    const writer = new BinaryWriter();
+    writer.writeString("QRSP");
+    writer.writeUint16(20);
+    const totalElements = allHist.length + Object.keys(currentSettings).length;
+    writer.writeFloat64(totalElements);
+    writer.writeString("Histories", 16);
+    writer.writeUint16(allHist.length);
+    const encoder = new TextEncoder();
+    for (const h of allHist) {
+      const hIdStr = String(h.id || Date.now());
+      writer.writeString(hIdStr, 64);
+      writer.writeUint16(0);
+      const hName = 'Scanner history';
+      writer.writeString(hName, 64);
+      writer.writeUint16(0);
+      const hStr = JSON.stringify(h);
+      const hBytes = encoder.encode(hStr);
+      writer.writeInt32(hBytes.length);
+      writer.writeUint32(1);
+      writer.writeBytes(hBytes);
+    }
+    writer.writeInt16(8224);
+    writer.writeString("Settings", 16);
+    writer.writeUint16(Object.keys(currentSettings).length);
+    for (const [key, val] of Object.entries(currentSettings)) {
+      writer.writeUint16(0);
+      writer.writeString(key, 64);
+      writer.writeUint16(0);
+      const valStr = String(val);
+      const valBytes = encoder.encode(valStr);
+      writer.writeInt32(valBytes.length);
+      writer.writeBytes(valBytes);
+    }
+    writer.writeString("META_EOF", 8);
+    const payloadBytes = writer.getBuffer();
+    const eccSize = Math.floor(payloadBytes.length * 0.065);
+    const eccBytes = new Uint8Array(eccSize);
+    for (let i = 0; i < eccSize; i++) {
+      let parity = 0;
+      for (let j = 0; j < payloadBytes.length; j++) {
+        parity = parity ^ (payloadBytes[j] * ((i + j) % 255 + 1));
+      }
+      eccBytes[i] = parity & 255;
+    }
+    const finalFileBytes = new Uint8Array(payloadBytes.length + eccSize);
+    finalFileBytes.set(payloadBytes);
+    finalFileBytes.set(eccBytes, payloadBytes.length);
+    const blob = new Blob([finalFileBytes], {type: "application/octet-stream"});
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = u;
+    a.download = "backup_v20_" + Date.now() + ".qrsp";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(u);
+    addLog('Exported history and settings in QRSP binary format', 'info');
+    showT('Backup exported (.qrsp)');
+  }
+  inpImportQRSP.onchange = async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = async event => {
+      try {
+        const arrayBuffer = event.target.result;
+        const fileBytes = new Uint8Array(arrayBuffer);
+        const T = fileBytes.length;
+        let P = Math.round(T / 1.065);
+        while (P + Math.floor(P * 0.065) > T) P--;
+        while (P + Math.floor(P * 0.065) < T) P++;
+        const payloadBytes = fileBytes.slice(0, P);
+        const eccBytes = fileBytes.slice(P);
+        let eccValid = true;
+        for (let i = 0; i < eccBytes.length; i++) {
+          let parity = 0;
+          for (let j = 0; j < payloadBytes.length; j++) {
+            parity = parity ^ (payloadBytes[j] * ((i + j) % 255 + 1));
+          }
+          if (eccBytes[i] !== (parity & 255)) {
+            eccValid = false;
+            break;
+          }
+        }
+        if (!eccValid) {
+          addLog('Warning: QRSP backup ECC verification failed. File might be corrupted!', 'error');
+        } else {
+          addLog('QRSP backup ECC verification passed successfully.', 'info');
+        }
+        const binReader = new BinaryReader(payloadBytes.buffer);
+        const header = binReader.readString(4);
+        if (header !== 'QRSP') {
+          throw new Error('Invalid signature');
+        }
+        const version = binReader.readUint16();
+        const totalElements = binReader.readFloat64();
+        const histFolderSig = binReader.readString(16);
+        if (histFolderSig !== 'Histories') {
+          throw new Error('Missing Histories section');
+        }
+        const numIdFolders = binReader.readUint16();
+        const importedHistories = [];
+        for (let i = 0; i < numIdFolders; i++) {
+          const hIdStr = binReader.readString(64);
+          const wrapStart = binReader.readUint16();
+          const name = binReader.readString(64);
+          const wrapMid = binReader.readUint16();
+          const dataLen = binReader.readInt32();
+          const elementsCount = binReader.readUint32();
+          const content = binReader.readString(dataLen);
+          try {
+            const histItem = JSON.parse(content);
+            histItem.id = isNaN(hIdStr) ? (Date.now() + Math.random()) : Number(hIdStr);
+            histItem.name = name.trim() || 'Scanner history';
+            importedHistories.push(histItem);
+          } catch (ex) {
+            addLog('Failed to parse history item inside folder ' + hIdStr, 'error');
+          }
+        }
+        const separator = binReader.readInt16();
+        const settingsFolderSig = binReader.readString(16);
+        if (settingsFolderSig !== 'Settings') {
+          throw new Error('Missing Settings section');
+        }
+        const numSettings = binReader.readUint16();
+        const importedSettings = {};
+        for (let i = 0; i < numSettings; i++) {
+          const wrapStart = binReader.readUint16();
+          const key = binReader.readString(64);
+          const wrapMid = binReader.readUint16();
+          const valLen = binReader.readInt32();
+          const valStr = binReader.readString(valLen);
+          let typedVal = valStr;
+          if (valStr === 'true') typedVal = true;
+          else if (valStr === 'false') typedVal = false;
+          else if (!isNaN(valStr) && valStr.trim() !== '') typedVal = Number(valStr);
+          importedSettings[key] = typedVal;
+        }
+        if (importedHistories.length > 0) {
+          for (const h of importedHistories) {
+            delete h.id;
+          }
+          await dAddM(importedHistories);
+        }
+        if (Object.keys(importedSettings).length > 0) {
+          const merged = { ...DEFAULT_SETTINGS, ...importedSettings };
+          applySettings(merged);
+          await saveSettings();
+        }
+        hist = await dAll();
+        renderH();
+        showT('Backup imported successfully');
+        addLog('Backup import completed. Loaded ' + importedHistories.length + ' history items and ' + Object.keys(importedSettings).length + ' settings.', 'info');
+      } catch (ex) {
+        addLog('QRSP import failed with exception: ' + ex.message, 'error');
+        showT('Import failed');
+      }
+    };
+    reader.readAsArrayBuffer(f);
+    inpImportQRSP.value = '';
+  };
   // ===== Init =====
   function checkBarcodeDetector(){
     if(!('BarcodeDetector' in window)){
@@ -5214,7 +6058,7 @@
     checkBarcodeDetector();
     await loadH();
     showT('Welcome! Tap Start or drop an image');
-    console.log('QR Scanner Pro v4.1 initialized');
+    console.log('QR Scanner Pro v4.2 initialized');
     console.log('Native BarcodeDetector:',nDet?'Available':'Not available');
     console.log('IndexedDB:','Available');
     console.log('localStorage: DISABLED (IndexedDB only)');
@@ -5223,5 +6067,6 @@
   }
   init();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a280abed0910dc2d',t:'MTc4NjIxNDY1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2b2e548ed11a918',t:'MTc4Njc0MTI5NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
+</body>
 </html>
